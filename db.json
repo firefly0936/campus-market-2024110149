@@ -1,0 +1,74 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "nickname": "校园用户",
+      "avatar": "",
+      "createdAt": "2026-06-27"
+    }
+  ],
+  "secondHand": [
+    {
+      "id": 1,
+      "title": "二手商品示例",
+      "description": "这是一个二手交易示例",
+      "price": 0,
+      "images": [],
+      "category": "电子产品",
+      "condition": "九成新",
+      "status": "在售",
+      "sellerId": 1,
+      "createdAt": "2026-06-27"
+    }
+  ],
+  "lostAndFound": [
+    {
+      "id": 1,
+      "title": "失物招领示例",
+      "description": "这是一个失物招领示例",
+      "type": "失物",
+      "location": "图书馆",
+      "status": "未解决",
+      "publisherId": 1,
+      "createdAt": "2026-06-27"
+    }
+  ],
+  "groupBuy": [
+    {
+      "id": 1,
+      "title": "拼单示例",
+      "description": "这是一个拼单搭子示例",
+      "targetCount": 3,
+      "currentCount": 1,
+      "deadline": "2026-06-30",
+      "status": "进行中",
+      "creatorId": 1,
+      "createdAt": "2026-06-27"
+    }
+  ],
+  "errand": [
+    {
+      "id": 1,
+      "title": "跑腿委托示例",
+      "description": "这是一个跑腿委托示例",
+      "reward": 0,
+      "pickupLocation": "校门口",
+      "deliveryLocation": "宿舍楼",
+      "status": "待接单",
+      "publisherId": 1,
+      "createdAt": "2026-06-27"
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "fromId": 1,
+      "toId": 1,
+      "content": "消息示例",
+      "relatedType": "secondHand",
+      "relatedId": 1,
+      "read": false,
+      "createdAt": "2026-06-27"
+    }
+  ]
+}

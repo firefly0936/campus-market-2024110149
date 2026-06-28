@@ -7,11 +7,14 @@
       <p class="subtitle">AI 辅助前端工程实践种子项目</p>
       <nav class="app-nav">
         <RouterLink to="/">首页</RouterLink>
+        <RouterLink to="/list">列表页</RouterLink>
+        <RouterLink to="/publish">发布页</RouterLink>
+        <RouterLink to="/message">消息页</RouterLink>
+        <RouterLink to="/profile">个人中心</RouterLink>
+        <RouterLink to="/board">看板页</RouterLink>
         <RouterLink to="/identity">身份创建</RouterLink>
         <RouterLink to="/market">集市列表</RouterLink>
-        <RouterLink to="/publish">发布</RouterLink>
         <RouterLink to="/messages">消息中心</RouterLink>
-        <RouterLink to="/profile">个人中心</RouterLink>
         <RouterLink to="/dashboard">趋势看板</RouterLink>
       </nav>
     </header>

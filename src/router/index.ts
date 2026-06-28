@@ -9,6 +9,26 @@ const router = createRouter({
       component: () => import('@/views/HomeView.vue'),
     },
     {
+      path: '/home',
+      name: 'home-alt',
+      component: () => import('@/views/HomeView.vue'),
+    },
+    {
+      path: '/list',
+      name: 'list',
+      component: () => import('@/views/ListView.vue'),
+    },
+    {
+      path: '/message',
+      name: 'message',
+      component: () => import('@/views/MessageView.vue'),
+    },
+    {
+      path: '/board',
+      name: 'board',
+      component: () => import('@/views/BoardView.vue'),
+    },
+    {
       path: '/identity',
       name: 'identity',
       component: () => import('@/views/IdentityView.vue'),

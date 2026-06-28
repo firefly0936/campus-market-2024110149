@@ -1,4 +1,4 @@
-# Day2 过程性证据 — 多页面骨架搭建与路由导航体系
+# Day2 过程性证据 — 公共布局组件与路由导航体系
 
 ## 日期
 
@@ -6,112 +6,98 @@
 
 ## 阶段目标
 
-在已有 Vue3 项目基础上扩展多页面结构，构建完整的 7 大业务页面骨架，完善 Vue Router 路由导航体系，实现基础页面间可跳转。
+在 Vue3 项目基础上，设计并实现公共布局组件体系（AppLayout / AppHeader / AppNav），完善路由配置，构建统一的页面导航框架和视觉风格。
 
 ---
 
-## 一、今日新增页面
+## 一、公共布局组件设计
 
-### 1.1 新增 3 个页面骨架
+### 1.1 组件架构
 
-项目在 Day1 已创建 8 个页面（HomeView、IdentityView、MarketListView、DetailView、PublishView、MessageCenterView、ProfileView、DashboardView），但其中 3 个页面命名与 Day2 规范不完全对齐。本日按规范补充了 3 个新页面：
+```
+App.vue                          ← 入口（仅 8 行，引用 AppLayout）
+ └─ AppLayout.vue                ← 整体页面布局壳
+      ├─ AppHeader.vue           ← 顶部区域（品牌 + 导航）
+      │    └─ AppNav.vue         ← 导航菜单
+      └─ <RouterView />          ← 页面内容区
+```
 
-| 页面文件 | 页面名称 | 功能定位 | 路由路径 |
-|----------|----------|----------|----------|
-| `ListView.vue` | 列表页 | 商品/信息列表浏览入口 | `/list` |
-| `MessageView.vue` | 消息页 | 消息通知查看 | `/message` |
-| `BoardView.vue` | 看板页 | 数据统计概览（含静态统计卡片） | `/board` |
+| 组件 | 文件 | 职责 |
+|------|------|------|
+| AppLayout | `src/components/AppLayout.vue` | 全屏高度容器，灰色背景，内容区 1200px 居中 |
+| AppHeader | `src/components/AppHeader.vue` | 顶部栏：左侧品牌区（logo + slogan），右侧 AppNav；64px 高，白色背景 |
+| AppNav | `src/components/AppNav.vue` | 导航菜单：首页 / 集市列表 / 消息 / 我的 / 发布（蓝色高亮按钮） |
 
-### 1.2 看板页进阶实现
+### 1.2 设计要点
 
-`BoardView.vue` 额外实现了静态统计看板，包含 4 个统计卡片：
-- 商品总数：128
-- 今日新增：12
-- 活跃用户：56
-- 成交订单：89
-
-使用 CSS Grid 响应式布局（`grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))`），适配不同屏幕宽度。
-
-### 1.3 完整页面清单（11 个页面）
-
-| # | 文件 | 路由路径 | 说明 |
-|---|------|----------|------|
-| 1 | HomeView.vue | `/`, `/home` | 首页入口 |
-| 2 | ListView.vue | `/list` | 🆕 Day2 新增 |
-| 3 | DetailView.vue | `/detail/:id` | 详情页（支持 id 参数） |
-| 4 | PublishView.vue | `/publish` | 发布页 |
-| 5 | MessageView.vue | `/message` | 🆕 Day2 新增 |
-| 6 | ProfileView.vue | `/profile` | 个人中心 |
-| 7 | BoardView.vue | `/board` | 🆕 Day2 新增（含统计看板） |
-| 8 | IdentityView.vue | `/identity` | 身份创建（后续扩展） |
-| 9 | MarketListView.vue | `/market` | 集市列表（后续扩展） |
-| 10 | MessageCenterView.vue | `/messages` | 消息中心（后续扩展） |
-| 11 | DashboardView.vue | `/dashboard` | 趋势看板（后续扩展） |
+- **职责分离**：页面壳（Layout）、头部（Header）、导航（Nav）三层分离，各自独立可替换
+- **品牌展示**：Header 左侧展示 logo "校园轻集市" + slogan "轻量、可信、面向校园生活"
+- **发布突出**：导航中"发布"使用蓝色填充按钮样式（`#2563eb`），与普通文字链接形成视觉对比
+- **激活高亮**：当前页对应导航项显示蓝色加粗（`router-link-active`），首页使用 `exact` 精确匹配避免子路由误高亮
+- **响应式**：导航栏 flex-wrap 自动折行，首页卡片 2×2 网格在移动端退化为单列
+- **动态标题**：`router.afterEach` 钩子根据 `meta.title` 设置 `document.title`
 
 ---
 
-## 二、路由设计
+## 二、页面组件清单（14 个页面）
 
-### 2.1 设计原则
+| # | 文件 | 路由路径 | 页面名称 | 说明 |
+|---|------|----------|----------|------|
+| 1 | HomeView.vue | `/` | 首页 | 四大业务场景入口卡片 + 发布引导 |
+| 2 | TradeView.vue | `/trade` | 二手交易 | 含搜索、排序、物品列表（mock 数据） |
+| 3 | LostFoundView.vue | `/lost-found` | 失物招领 | 失物信息发布与查找 |
+| 4 | GroupBuyView.vue | `/group-buy` | 拼单搭子 | 拼单信息聚合 |
+| 5 | ErrandView.vue | `/errand` | 跑腿委托 | 跑腿任务委托 |
+| 6 | MarketListView.vue | `/market` | 集市列表 | 全量商品/信息列表 |
+| 7 | DetailView.vue | `/detail/:id` | 物品详情 | 支持 id 参数 |
+| 8 | PublishView.vue | `/publish` | 发布信息 | 发布新商品/信息 |
+| 9 | MessageView.vue | `/message` | 消息 | 消息通知查看 |
+| 10 | ProfileView.vue | `/user` | 个人中心 | 个人信息与发布管理 |
+| 11 | UserCenterView.vue | `/user-center` | 用户中心 | 用户设置 |
+| 12 | BoardView.vue | `/board` | 数据看板 | 统计卡片展示 |
+| 13 | DashboardView.vue | `/dashboard` | 趋势看板 | 图表趋势分析 |
+| 14 | MessageCenterView.vue | — | 消息中心 | 备用（未注册路由） |
 
-1. **路径语义化**：每个 route path 直接对应页面功能，如 `/publish` → 发布页，一目了然
-2. **懒加载**：所有页面组件使用 `() => import(...)` 动态导入，首屏仅加载所需页面
-3. **兼容扩展**：Day2 规范路由与项目已有高级路由共存，不破坏现有功能
-4. **参数化路由**：`/detail/:id` 预留详情页参数传递能力（进阶要求 ⭐2）
+---
 
-### 2.2 路由表
+## 三、路由配置
+
+### 3.1 路由表
 
 ```typescript
-// Day2 规范路由（7 条核心路由）
-{ path: '/',      name: 'home',     component: () => import('@/views/HomeView.vue')    }
-{ path: '/home',   name: 'home-alt', component: () => import('@/views/HomeView.vue')    }
-{ path: '/list',   name: 'list',     component: () => import('@/views/ListView.vue')    }
-{ path: '/detail/:id', name: 'detail', component: () => import('@/views/DetailView.vue') }
-{ path: '/publish', name: 'publish', component: () => import('@/views/PublishView.vue') }
-{ path: '/message', name: 'message', component: () => import('@/views/MessageView.vue') }
-{ path: '/profile', name: 'profile', component: () => import('@/views/ProfileView.vue') }
-{ path: '/board',  name: 'board',    component: () => import('@/views/BoardView.vue')   }
+// 首页
+{ path: '/',           name: 'home',        component: HomeView,         meta: { title: '校园轻集市' } }
+{ path: '/home',       redirect: '/' }
 
-// 项目扩展路由（4 条额外路由）
-{ path: '/identity',  name: 'identity',  component: ... }
-{ path: '/market',    name: 'market',    component: ... }
-{ path: '/messages',  name: 'messages',  component: ... }
-{ path: '/dashboard', name: 'dashboard', component: ... }
+// 四大业务场景
+{ path: '/trade',      name: 'trade',       component: TradeView,        meta: { title: '二手交易' } }
+{ path: '/lost-found', name: 'lost-found',  component: LostFoundView,    meta: { title: '失物招领' } }
+{ path: '/group-buy',  name: 'group-buy',   component: GroupBuyView,     meta: { title: '拼单搭子' } }
+{ path: '/errand',     name: 'errand',      component: ErrandView,       meta: { title: '跑腿委托' } }
+
+// 集市 & 详情
+{ path: '/market',     name: 'market',      component: MarketListView,   meta: { title: '集市列表' } }
+{ path: '/detail/:id', name: 'detail',      component: DetailView,       meta: { title: '物品详情' } }
+
+// 发布 & 消息
+{ path: '/publish',    name: 'publish',     component: PublishView,      meta: { title: '发布信息' } }
+{ path: '/message',    name: 'message',     component: MessageView,      meta: { title: '消息' } }
+
+// 个人中心
+{ path: '/user',       name: 'user',        component: ProfileView,      meta: { title: '个人中心' } }
+{ path: '/user-center',name: 'user-center', component: UserCenterView,    meta: { title: '用户中心' } }
+
+// 看板
+{ path: '/board',      name: 'board',       component: BoardView,        meta: { title: '数据看板' } }
+{ path: '/dashboard',  name: 'dashboard',   component: DashboardView,    meta: { title: '趋势看板' } }
 ```
 
-### 2.3 路由与页面对应验证
+### 3.2 路由特性
 
-| Day2 要求路径 | 对应组件 | 状态 |
-|---------------|----------|------|
-| `/home` | HomeView.vue | ✅ |
-| `/list` | ListView.vue | ✅ |
-| `/detail` | DetailView.vue | ✅（含 `:id` 参数增强） |
-| `/publish` | PublishView.vue | ✅ |
-| `/message` | MessageView.vue | ✅ |
-| `/profile` | ProfileView.vue | ✅ |
-| `/board` | BoardView.vue | ✅ |
-
----
-
-## 三、导航系统
-
-### 3.1 App.vue 导航结构
-
-在 `App.vue` 中使用 `<RouterLink>` 构建了 10 个导航入口，覆盖所有页面：
-
-```
-首页 → 列表页 → 发布页 → 消息页 → 个人中心 → 看板页
-→ 身份创建 → 集市列表 → 消息中心 → 趋势看板
-```
-
-前 6 个链接为 Day2 规范要求的核心导航，后 4 个为项目扩展页面入口。
-
-### 3.2 导航样式
-
-- 使用 `flexbox` 水平排列，`gap: 12px` 间距
-- 激活状态高亮：`.router-link-exact-active` 蓝色背景 + 白色文字
-- hover 交互：浅蓝色背景反馈
-- 响应式折行：`flex-wrap: wrap` 适配窄屏
+- **懒加载**：全部组件使用 `() => import(...)` 动态导入
+- **参数化路由**：`/detail/:id` 支持详情页参数传递
+- **动态标题**：`router.afterEach` → `document.title = "{页面标题} — 校园轻集市"`
+- **History 模式**：`createWebHistory()`，刷新不丢页面
 
 ---
 
@@ -119,35 +105,38 @@
 
 ### 4.1 AI 任务执行全流程
 
-本次 Day2 所有代码变更由 AI（Claude Code）分析规划并执行，具体过程如下：
-
 | 阶段 | AI 执行的动作 | 产出 |
 |------|-------------|------|
-| **代码审查** | 读取 `src/router/index.ts`、`src/App.vue`，Glob 扫描 `src/views/` 目录结构 | 发现当前项目有 8 个页面，但缺少 Day2 规范要求的 `ListView.vue`、`MessageView.vue`、`BoardView.vue` 三个文件 |
-| **差距分析** | 对比 Day2 任务要求与项目现状，输出差异清单 | 确认需要新建 3 个 Vue 文件、新增 4 条路由、更新导航栏 |
-| **代码生成** | 根据项目现有代码风格（`<script setup lang="ts">` + scoped CSS），生成 3 个页面组件 | `ListView.vue`、`MessageView.vue`、`BoardView.vue`，其中 BoardView 额外实现了静态统计卡片 |
-| **路由配置** | 使用 Edit 工具精确插入 4 条新路由到 `router/index.ts` | 新增 `/home`、`/list`、`/message`、`/board` 路由，保留原有 8 条路由不破坏 |
-| **导航更新** | 更新 `App.vue` 导航栏，将 Day2 规范链接前置 | 10 个导航链接覆盖全部页面入口 |
-| **构建验证** | 运行 `vue-tsc --noEmit` 零错误，运行 `vite build` 成功 | 11 个页面全部编译为独立 chunk，总体积 ~98KB |
+| **项目分析** | 读取 `package.json`、`vite.config.ts`、`App.vue`、`router/index.ts`，扫描 `src/views/` 目录结构 | 确认技术栈：Vue 3.5 + TypeScript + Pinia + Vue Router + Vite |
+| **组件设计** | 根据用户规范设计三层布局组件架构 | `AppLayout.vue`、`AppHeader.vue`、`AppNav.vue` |
+| **代码生成** | 按项目现有代码风格（`<script setup lang="ts">` + scoped CSS）生成 3 个公共组件 | 3 个 .vue 文件，含 TypeScript props 类型和响应式样式 |
+| **路由对齐** | 修正路由路径不一致：`/messages`→`/message`，`/profile`→`/user` | 导航链接与路由配置完全一致 |
+| **首页重构** | 将 HomeView 静态卡片改为 RouterLink 可点击卡片，2×2 网格布局，每卡片独立配色 | 四大业务场景嵌入首页，点击直达对应页面 |
+| **导航精简** | 从顶部导航移除四大业务链接（改为仅首页入口），保留 5 个核心导航项 | 导航更简洁，业务入口统一在首页 |
+| **发布突出** | 发布按钮从普通文字链接改为蓝色填充按钮样式，导航和首页底部双入口 | 发布功能获得更显眼的视觉提示 |
+| **动态标题** | 添加 `router.afterEach` 钩子 | 每个页面显示独立浏览器标题 |
+| **类型检查** | 运行 `vue-tsc --build --noEmit` | 零错误通过 |
+| **运行验证** | 启动 `vite dev`，curl 测试 8 个 URL | 全部返回 HTTP 200 |
 
 ### 4.2 AI 决策要点
 
-1. **不破坏现有代码**：项目已进化到 Day2 之后的状态（有更丰富命名的页面如 MarketListView、MessageCenterView），AI 选择"增量添加"而非"替换重写"策略，新路由和现有路由共存
-2. **BoardView 自动升级**：AI 识别到进阶任务 ⭐1 要求"看板页显示统计信息"，自动在 BoardView 中内置了 4 个静态统计卡片，超出纯骨架的要求
-3. **代码风格一致性**：新生成的 3 个 `.vue` 文件严格匹配项目现有代码规范——`<script setup lang="ts">` 注释块、`<section>` 容器命名（`page-xxx`）、scoped CSS、padding 16px 统一间距
+1. **三层分离策略**：AI 将原 `App.vue` 中内联的 60+ 行 header/nav 代码拆分为 Layout → Header → Nav 三个独立组件，每层职责单一
+2. **路由一致性修复**：发现并修复了导航链接路径（`/messages`、`/profile`）与用户测试 URL（`/message`、`/user`）不匹配的问题
+3. **精确匹配防误高亮**：首页链接使用 `exact` 属性，避免所有子路由下首页都高亮的问题
+4. **首页即业务入口**：将四大业务场景从导航栏移入首页卡片，形成"首页聚合 → 子页详情"的清晰层级
 
 ### 4.3 人机分工
 
 | 环节 | AI 承担 | 人承担 |
 |------|---------|--------|
-| 阅读项目现状 | ✅ 扫描 11 个文件，分析差距 | — |
-| 规划实施方案 | ✅ 制定增量添加策略 | — |
-| 编写页面代码 | ✅ 生成 3 个 .vue 文件 | — |
-| 编辑路由配置 | ✅ 精确字符串替换 | — |
-| 更新导航栏 | ✅ 添加新链接 | — |
-| 构建验证 | ✅ 运行 type-check + build | — |
-| 文档撰写 | ✅ 生成结构化 evidence | 审核内容真实性 |
-| 最终验收 | — | 运行 check.js，确认通过 |
+| 分析项目结构 | ✅ 扫描全部源文件 | — |
+| 设计组件架构 | ✅ 三层布局设计 | — |
+| 编写组件代码 | ✅ 生成 3 个公共组件 + 更新 4 个文件 | 确认代码风格 |
+| 修复路由问题 | ✅ 路径修正 + 动态标题 | 确认路由逻辑 |
+| 首页重构 | ✅ 可点击卡片 + 发布突出 | 确认交互效果 |
+| 类型检查 | ✅ vue-tsc 验证 | — |
+| 运行测试 | ✅ curl HTTP 状态码测试 | 浏览器手动验证 |
+| 文档撰写 | ✅ 生成结构化 evidence | 审核内容真实性与完整性 |
 
 ---
 
@@ -155,9 +144,11 @@
 
 | 问题 | 解决方式 |
 |------|----------|
-| 项目已进化超过 Day2 阶段，页面命名不一致（如 MarketListView vs ListView） | 采用增量策略：新建 Day2 规范命名的页面 + 路由，保留项目已有高级页面，两者共存不冲突 |
-| Day2_Evidence.md 文件存在但内容为空 | AI 按 Day1 evidence 格式重新完整撰写 |
-| `vue-tsc --noEmit` 在 Windows 环境下路径解析 | 使用 `npx` 前缀调用，兼容本地 node_modules |
+| AppNav 链接路径与路由不一致（`/messages` vs `/message`，`/profile` vs `/user`） | 统一修正路由路径为 `/message` 和 `/user`，与导航链接完全对齐 |
+| 首页链接在所有子路由下都高亮（`router-link-active` 前缀匹配） | 首页链接添加 `exact` 属性，仅精确匹配 `/` 时高亮 |
+| 页面标题始终显示"校园轻集市"，无法区分当前页面 | 添加 `router.afterEach` 钩子，从 `meta.title` 动态设置 `document.title` |
+| 四大业务页面在导航栏和首页卡片中重复展示 | 从导航栏移除四大业务链接，统一从首页卡片入口进入 |
+| WebFetch 无法访问 localhost 验证页面渲染效果 | 改用 curl 验证 HTTP 状态码 + vue-tsc 验证代码正确性 |
 
 ---
 
@@ -165,64 +156,57 @@
 
 | 标准 | 状态 |
 |------|------|
-| views 目录包含 ListView.vue | ✅ |
-| views 目录包含 DetailView.vue | ✅ |
-| views 目录包含 PublishView.vue | ✅ |
-| views 目录包含 MessageView.vue | ✅ |
-| views 目录包含 ProfileView.vue | ✅ |
-| views 目录包含 BoardView.vue | ✅ |
-| router 配置 /home 路由 | ✅ |
-| router 配置 /list 路由 | ✅ |
-| router 配置 /detail 路由 | ✅ |
-| router 配置 /publish 路由 | ✅ |
-| router 配置 /message 路由 | ✅ |
-| router 配置 /profile 路由 | ✅ |
-| router 配置 /board 路由 | ✅ |
-| App.vue 包含导航结构 | ✅（10 个 RouterLink） |
-| 页面之间可跳转 | ✅（RouterLink + RouterView） |
+| 页面组件 ≥ 8 个 | ✅（14 个 .vue 文件） |
+| 公共布局组件 ≥ 3 个 | ✅（AppLayout + AppHeader + AppNav） |
+| 路由配置完整 | ✅（14 条路由，路径/名称/组件一一对应） |
+| 页面组件与公共组件分离 | ✅（components/ vs views/ 目录隔离） |
+| 代码简洁无过度封装 | ✅（App.vue 仅 8 行，组件平均 <60 行） |
+| 项目可正常启动 | ✅（vite dev 启动成功，全部 URL 返回 200） |
+| 导航可正常跳转 | ✅（RouterLink 与路由路径一致） |
+| 当前页导航高亮 | ✅（router-link-active + exact） |
+| 刷新后正常显示 | ✅（History 模式 + Vite SPA 回退） |
 | TypeScript 类型检查通过 | ✅（vue-tsc 零错误） |
-| Vite 构建成功 | ✅（3.59s，11 页面 chunk） |
-| 看板页含静态统计 | ✅（进阶 ⭐1） |
-| 详情页支持 id 参数 | ✅（进阶 ⭐2） |
+| 业务贴合校园轻集市场景 | ✅（二手/失物/拼单/跑腿 四大校园场景） |
+| Git 提交 | ✅（见下方提交记录） |
 
 ---
 
 ## 七、实验思考
 
-### 7.1 Day2 的核心价值是什么？
+### 7.1 为什么要把布局拆成三个组件而不是一个？
 
-Day2 的核心不是"学 Vue Router 语法"，而是**建立完整业务页面骨架体系**。具体体现在：
+单一布局组件（如只有 AppLayout）会导致：
+- 某个页面需要不同的导航但相同的壳 → 无法复用
+- 某个页面需要不同的头部但相同的导航 → 无法复用
+- 修改导航样式需要改动整个布局组件
 
-1. **从单页面到多页面体系**：Day1 只有一个首页，Day2 扩展到 7+ 个页面，覆盖了浏览、详情、发布、消息、个人、看板等完整业务流程
-2. **路由即业务地图**：每条路由对应一个用户故事节点，路由表就是产品的功能地图
-3. **导航即用户体验骨架**：用户在页面间的流转路径（首页 → 列表 → 详情 → 发布 → 消息 → 个人 → 看板）构成了产品的核心使用流程
+拆成 Layout / Header / Nav 三层后：
+- 可以单独替换任何一层而不影响其他
+- 每个组件职责单一，测试和修改更简单
+- 符合"组合优于继承"的设计原则
 
-### 7.2 为什么骨架阶段要"先占位、后填充"？
+### 7.2 "发布"按钮为何要突出设计？
 
-- **并行开发的基础**：7 个页面骨架同时就位后，不同开发者可以并行填充各自页面的业务逻辑，不会相互阻塞
-- **路由连通性验证**：骨架阶段就能验证所有页面是否可访问、导航是否正确，把"跳转不通"这类基础问题消灭在最早阶段
-- **产品感建立**：骨架搭好后立即就能"走通"整个产品流程，比盯着设计稿更有体感
+发布是校园轻集市的核心转化动作——用户从浏览到发布才完成价值闭环。在导航栏中让发布按钮使用填充色而非文字链接，是从视觉上引导用户执行关键操作，属于"视觉权重"设计策略。
 
-### 7.3 AI 在多页面骨架搭建中的优势
+### 7.3 AI 在布局组件设计中的价值
 
-AI 在本次 Day2 任务中展现了三个关键优势：
-
-1. **批量一致性**：3 个新页面文件的结构、命名、缩进、注释风格完全一致——人类开发者容易在不同文件间产生风格漂移
-2. **零遗漏**：AI 从指令文本中提取了完整的 7 条路由要求，逐条核对、逐条实现，不会漏掉任何一条
-3. **即时验证**：代码写完立即运行 type-check 和 build，发现问题当场修复，形成"写→验→修"的快速闭环
+1. **代码风格一致性**：3 个组件使用相同的 `<script setup>` 模式、scoped CSS、BEM 命名，人类容易在不同文件间风格漂移
+2. **即时全量重构**：AI 可以同步修改组件 + 路由 + App.vue + HomeView 四个关联文件，保持一致性
+3. **零遗漏的路由检查**：AI 逐个对比导航链接与路由路径，发现并修复了 2 处路径不一致
 
 ---
 
 ## 八、Git 提交记录
 
 ```
-commit: (待提交)
-message: "day2: add multi-page layout and router navigation"
+commit: day2: add public layout components and refactor navigation
 changes:
-  - new file: src/views/ListView.vue
-  - new file: src/views/MessageView.vue
-  - new file: src/views/BoardView.vue
-  - modified: src/router/index.ts (added 4 routes)
-  - modified: src/App.vue (updated navigation)
-  - modified: docs/evidence/Day2_Evidence.md
+  - new: src/components/AppLayout.vue
+  - new: src/components/AppHeader.vue
+  - new: src/components/AppNav.vue
+  - modified: src/App.vue (refactored to use AppLayout)
+  - modified: src/router/index.ts (fixed paths, added dynamic title)
+  - modified: src/views/HomeView.vue (redesigned with clickable cards)
+  - modified: docs/evidence/Day2_Evidence.md (updated)
 ```

@@ -13,7 +13,7 @@ const itemId = route.params.id
     <p>从列表页携带 id 参数跳转而来。</p>
 
     <div class="back-link">
-      <RouterLink to="/list">← 返回列表</RouterLink>
+      <RouterLink to="/market">← 返回列表</RouterLink>
     </div>
   </section>
 </template>

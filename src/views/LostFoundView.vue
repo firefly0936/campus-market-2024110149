@@ -1,44 +1,45 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getLostFoundList, type LostFoundItem } from '@/api/lostFound'
+import EmptyState from '@/components/EmptyState.vue'
 
-const activeTab = ref<'all' | 'lost' | 'found'>('all')
+const items = ref<LostFoundItem[]>([])
 const searchQuery = ref('')
+const activeTab = ref<'all' | 'lost' | 'found'>('all')
+const loading = ref(false)
 
-interface LostFoundItem {
-  id: number
-  title: string
-  type: '失物' | '招领'
-  location: string
-  date: string
-  status: string
-  description: string
-}
-
-const items: LostFoundItem[] = [
-  { id: 1, title: '蓝色校园卡 — 张三', type: '招领', location: '图书馆二楼', date: '2026-06-25', status: '待认领', description: '在图书馆二楼阅览室拾到' },
-  { id: 2, title: '黑色双肩包', type: '失物', location: '食堂一楼', date: '2026-06-24', status: '寻找中', description: '吃饭时遗忘在座位，内有课本和文具' },
-  { id: 3, title: '华为蓝牙耳机 FreeBuds', type: '招领', location: '3号教学楼302', date: '2026-06-26', status: '待认领', description: '白色充电盒，下课后发现' },
-  { id: 4, title: '学生证 — 李四', type: '失物', location: '操场', date: '2026-06-23', status: '寻找中', description: '可能掉在操场跑道附近' },
-  { id: 5, title: '钥匙串（3把钥匙+U盘）', type: '招领', location: '北门传达室', date: '2026-06-27', status: '待认领', description: '北门入口处拾到' },
-  { id: 6, title: '水杯 膳魔师 500ml 蓝色', type: '失物', location: '图书馆自习室', date: '2026-06-26', status: '寻找中', description: '遗忘在自习室B区' },
-]
+onMounted(async () => {
+  loading.value = true
+  try {
+    const res = await getLostFoundList()
+    items.value = res.data
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredItems = computed(() => {
-  let result = items
-  if (activeTab.value === 'lost') result = result.filter(item => item.type === '失物')
-  if (activeTab.value === 'found') result = result.filter(item => item.type === '招领')
+  let result = items.value
+  if (activeTab.value === 'lost')
+    result = result.filter(item => item.type === '失物')
+  if (activeTab.value === 'found')
+    result = result.filter(item => item.type === '招领')
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
-    result = result.filter(item => item.title.toLowerCase().includes(q) || item.location.toLowerCase().includes(q))
+    result = result.filter(
+      item =>
+        item.title.toLowerCase().includes(q) ||
+        item.location.toLowerCase().includes(q)
+    )
   }
   return result
 })
 </script>
 
 <template>
-  <section class="page-lost-found">
+  <section class="page">
     <div class="page-header">
-      <h2>🔍 失物招领</h2>
+      <h1>🔍 失物招领</h1>
       <p>丢了东西？来这里找找。捡到东西？帮它找到主人。</p>
     </div>
 
@@ -75,14 +76,17 @@ const filteredItems = computed(() => {
       />
     </div>
 
+    <!-- 加载 -->
+    <p v-if="loading" class="empty-tip">加载中…</p>
+
     <!-- 列表 -->
-    <div class="lf-list">
+    <div v-else class="list">
       <div v-for="item in filteredItems" :key="item.id" class="lf-card">
         <div class="lf-header">
           <span :class="['type-badge', item.type === '失物' ? 'lost' : 'found']">
             {{ item.type }}
           </span>
-          <span :class="['status-badge', { resolved: item.status !== '寻找中' && item.status !== '待认领' }]">
+          <span :class="['status-badge', item.status !== '未解决' ? 'resolved' : '']">
             {{ item.status }}
           </span>
         </div>
@@ -90,40 +94,42 @@ const filteredItems = computed(() => {
         <p class="lf-desc">{{ item.description }}</p>
         <div class="lf-meta">
           <span>📍 {{ item.location }}</span>
-          <span>📅 {{ item.date }}</span>
+          <span>📅 {{ item.lostDate }}</span>
         </div>
       </div>
-      <p v-if="!filteredItems.length" class="empty-tip">暂无相关记录</p>
+      <EmptyState
+        v-if="!loading && filteredItems.length === 0"
+        text="暂无失物招领信息"
+      />
     </div>
   </section>
 </template>
 
 <style scoped>
-.page-lost-found {
-  padding: 16px;
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
 }
 
-.page-header h2 {
-  color: #333;
-  font-size: 22px;
+.page-header h1 {
   margin: 0 0 8px;
 }
 
 .page-header p {
-  color: #999;
-  font-size: 14px;
   margin: 0;
+  color: #6b7280;
 }
 
 .tab-nav {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .tab-btn {
@@ -152,7 +158,6 @@ const filteredItems = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
   padding: 10px 14px;
   border: 1px solid #dcdfe6;
   border-radius: 8px;
@@ -183,15 +188,15 @@ const filteredItems = computed(() => {
   color: #c0c4cc;
 }
 
-.lf-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .lf-card {
   padding: 16px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   transition: box-shadow 0.2s;
 }
@@ -246,6 +251,11 @@ const filteredItems = computed(() => {
   margin: 0 0 10px;
   font-size: 14px;
   color: #666;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .lf-meta {
@@ -259,5 +269,11 @@ const filteredItems = computed(() => {
   text-align: center;
   color: #999;
   padding: 32px 0;
+}
+
+@media (max-width: 600px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

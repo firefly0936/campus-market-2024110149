@@ -1,32 +1,29 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getGroupBuyList, type GroupBuyItem } from '@/api/groupBuy'
+import EmptyState from '@/components/EmptyState.vue'
 
-const activeTab = ref<'all' | 'active' | 'completed'>('all')
+const items = ref<GroupBuyItem[]>([])
 const searchQuery = ref('')
+const activeTab = ref<'all' | 'active' | 'completed'>('all')
+const loading = ref(false)
 
-interface GroupBuyItem {
-  id: number
-  title: string
-  currentCount: number
-  targetCount: number
-  deadline: string
-  location: string
-  unitPrice: number
-}
-
-const items: GroupBuyItem[] = [
-  { id: 1, title: '奶茶拼单 — 满减差2人', currentCount: 3, targetCount: 5, deadline: '2026-06-29', location: '南门奶茶店', unitPrice: 15 },
-  { id: 2, title: '找室友拼网费 — 半年套餐', currentCount: 2, targetCount: 4, deadline: '2026-07-05', location: '线上', unitPrice: 120 },
-  { id: 3, title: '外卖满减拼单 — 满50减20', currentCount: 1, targetCount: 3, deadline: '2026-06-28', location: '2号宿舍楼', unitPrice: 25 },
-  { id: 4, title: '打印纸团购 — A4纸整箱', currentCount: 8, targetCount: 10, deadline: '2026-07-01', location: '教学楼大厅', unitPrice: 18 },
-  { id: 5, title: '二手教材团购 — 考研数学全套', currentCount: 5, targetCount: 5, deadline: '2026-06-27', location: '图书馆', unitPrice: 60 },
-  { id: 6, title: '水果拼单 — 当季樱桃5斤装', currentCount: 2, targetCount: 6, deadline: '2026-07-03', location: '北门', unitPrice: 45 },
-]
+onMounted(async () => {
+  loading.value = true
+  try {
+    const res = await getGroupBuyList()
+    items.value = res.data
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredItems = computed(() => {
-  let result = items
-  if (activeTab.value === 'active') result = result.filter(i => i.currentCount < i.targetCount)
-  if (activeTab.value === 'completed') result = result.filter(i => i.currentCount >= i.targetCount)
+  let result = items.value
+  if (activeTab.value === 'active')
+    result = result.filter(i => i.currentCount < i.targetCount)
+  if (activeTab.value === 'completed')
+    result = result.filter(i => i.currentCount >= i.targetCount)
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
     result = result.filter(item => item.title.toLowerCase().includes(q))
@@ -40,9 +37,9 @@ function progressPercent(item: GroupBuyItem): number {
 </script>
 
 <template>
-  <section class="page-group-buy">
+  <section class="page">
     <div class="page-header">
-      <h2>🤝 拼单搭子</h2>
+      <h1>🤝 拼单搭子</h1>
       <p>一起拼，更划算！找搭子凑单，享团购优惠。</p>
     </div>
 
@@ -79,10 +76,14 @@ function progressPercent(item: GroupBuyItem): number {
       />
     </div>
 
+    <!-- 加载 -->
+    <p v-if="loading" class="empty-tip">加载中…</p>
+
     <!-- 列表 -->
-    <div class="gb-list">
+    <div v-else class="list">
       <div v-for="item in filteredItems" :key="item.id" class="gb-card">
         <h3 class="gb-title">{{ item.title }}</h3>
+        <p class="gb-desc">{{ item.description }}</p>
         <div class="progress-wrapper">
           <div class="progress-bar">
             <div
@@ -94,45 +95,44 @@ function progressPercent(item: GroupBuyItem): number {
           <span class="progress-text">{{ item.currentCount }}/{{ item.targetCount }} 人</span>
         </div>
         <div class="gb-meta">
-          <span class="meta-tag">💰 ¥{{ item.unitPrice }}/人</span>
           <span class="meta-tag">📅 {{ item.deadline }}</span>
-          <span class="meta-tag">📍 {{ item.location }}</span>
+          <span class="meta-tag">📍 {{ item.meetingLocation }}</span>
         </div>
-        <div class="gb-status" v-if="item.currentCount >= item.targetCount">
-          ✅ 已成团
-        </div>
+        <div v-if="item.currentCount >= item.targetCount" class="gb-status">✅ 已成团</div>
       </div>
-      <p v-if="!filteredItems.length" class="empty-tip">暂无拼单活动</p>
+      <EmptyState
+        v-if="!loading && filteredItems.length === 0"
+        text="暂无拼单活动"
+      />
     </div>
   </section>
 </template>
 
 <style scoped>
-.page-group-buy {
-  padding: 16px;
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
 }
 
-.page-header h2 {
-  color: #333;
-  font-size: 22px;
+.page-header h1 {
   margin: 0 0 8px;
 }
 
 .page-header p {
-  color: #999;
-  font-size: 14px;
   margin: 0;
+  color: #6b7280;
 }
 
 .tab-nav {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .tab-btn {
@@ -161,7 +161,6 @@ function progressPercent(item: GroupBuyItem): number {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
   padding: 10px 14px;
   border: 1px solid #dcdfe6;
   border-radius: 8px;
@@ -192,15 +191,15 @@ function progressPercent(item: GroupBuyItem): number {
   color: #c0c4cc;
 }
 
-.gb-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .gb-card {
   padding: 16px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   transition: box-shadow 0.2s;
 }
@@ -210,9 +209,20 @@ function progressPercent(item: GroupBuyItem): number {
 }
 
 .gb-title {
-  margin: 0 0 12px;
+  margin: 0 0 6px;
   font-size: 16px;
   color: #303133;
+}
+
+.gb-desc {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .progress-wrapper {
@@ -272,5 +282,11 @@ function progressPercent(item: GroupBuyItem): number {
   text-align: center;
   color: #999;
   padding: 32px 0;
+}
+
+@media (max-width: 600px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

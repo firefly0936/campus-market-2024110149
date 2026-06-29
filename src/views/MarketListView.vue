@@ -1,7 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getSecondHandList, type SecondHandItem } from '@/api/secondHand'
+import { getLostFoundList, type LostFoundItem } from '@/api/lostFound'
+import { getGroupBuyList, type GroupBuyItem } from '@/api/groupBuy'
+import { getErrandList, type ErrandItem } from '@/api/errand'
+import EmptyState from '@/components/EmptyState.vue'
 
-// 四个业务分类（与首页一致）
+// 统一列表项类型
+interface MarketItem {
+  id: number
+  title: string
+  category: string
+  categoryKey: string
+  price: number
+  extra: string
+}
+
+const items = ref<MarketItem[]>([])
+const loading = ref(false)
+const activeTab = ref('all')
+const searchQuery = ref('')
+
 const categories = [
   { key: 'secondHand', name: '二手交易', icon: '🛒' },
   { key: 'lostAndFound', name: '失物招领', icon: '🔍' },
@@ -9,33 +28,63 @@ const categories = [
   { key: 'errand', name: '跑腿委托', icon: '🏃' },
 ]
 
-const activeTab = ref('all')
-const searchQuery = ref('')
+onMounted(async () => {
+  loading.value = true
+  try {
+    const [secondHandRes, lostFoundRes, groupBuyRes, errandRes] = await Promise.all([
+      getSecondHandList(),
+      getLostFoundList(),
+      getGroupBuyList(),
+      getErrandList(),
+    ])
 
-interface ListItem {
-  id: number
-  title: string
-  category: string
-  price: number
-}
+    const secondHandItems: MarketItem[] = secondHandRes.data.map((item: SecondHandItem) => ({
+      id: item.id,
+      title: item.title,
+      category: '二手交易',
+      categoryKey: 'secondHand',
+      price: item.price,
+      extra: item.condition,
+    }))
 
-const items: ListItem[] = [
-  { id: 1, title: '二手自行车 — 9成新', category: '二手交易', price: 200 },
-  { id: 2, title: '图书馆拾到校园卡', category: '失物招领', price: 0 },
-  { id: 3, title: '奶茶拼单 — 满减差2人', category: '拼单搭子', price: 15 },
-  { id: 4, title: '代取快递 — 北门驿站', category: '跑腿委托', price: 5 },
-  { id: 5, title: '机械键盘 Cherry 青轴', category: '二手交易', price: 350 },
-  { id: 6, title: '找室友拼网费 — 半年', category: '拼单搭子', price: 120 },
-]
+    const lostFoundItems: MarketItem[] = lostFoundRes.data.map((item: LostFoundItem) => ({
+      id: item.id,
+      title: item.title,
+      category: '失物招领',
+      categoryKey: 'lostAndFound',
+      price: 0,
+      extra: item.type,
+    }))
+
+    const groupBuyItems: MarketItem[] = groupBuyRes.data.map((item: GroupBuyItem) => ({
+      id: item.id,
+      title: item.title,
+      category: '拼单搭子',
+      categoryKey: 'groupBuy',
+      price: 0,
+      extra: `${item.currentCount}/${item.targetCount}人`,
+    }))
+
+    const errandItems: MarketItem[] = errandRes.data.map((item: ErrandItem) => ({
+      id: item.id,
+      title: item.title,
+      category: '跑腿委托',
+      categoryKey: 'errand',
+      price: item.reward,
+      extra: item.status,
+    }))
+
+    items.value = [...secondHandItems, ...lostFoundItems, ...groupBuyItems, ...errandItems]
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredItems = computed(() => {
-  let result = items
-  // 先按分类筛选
+  let result = items.value
   if (activeTab.value !== 'all') {
-    const cat = categories.find(c => c.key === activeTab.value)
-    if (cat) result = result.filter(item => item.category === cat.name)
+    result = result.filter(item => item.categoryKey === activeTab.value)
   }
-  // 再按搜索关键词筛选
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
     result = result.filter(
@@ -83,23 +132,29 @@ const filteredItems = computed(() => {
       </button>
     </nav>
 
+    <!-- 加载 -->
+    <p v-if="loading" class="empty-tip">加载中…</p>
+
     <!-- 列表区域 -->
-    <div class="item-list">
+    <div v-else class="item-list">
       <RouterLink
         v-for="item in filteredItems"
-        :key="item.id"
+        :key="`${item.categoryKey}-${item.id}`"
         :to="`/detail/${item.id}`"
         class="item-card"
       >
         <div class="item-header">
           <span class="item-category">{{ item.category }}</span>
           <span v-if="item.price > 0" class="item-price">¥{{ item.price }}</span>
-          <span v-else class="item-price free">免费</span>
+          <span v-else class="item-price free">{{ item.extra }}</span>
         </div>
         <h3 class="item-title">{{ item.title }}</h3>
         <span class="item-arrow">查看详情 →</span>
       </RouterLink>
-      <p v-if="!filteredItems.length" class="empty-tip">暂无相关条目</p>
+      <EmptyState
+        v-if="!loading && filteredItems.length === 0"
+        text="暂无相关条目"
+      />
     </div>
   </section>
 </template>

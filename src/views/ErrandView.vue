@@ -1,44 +1,46 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getErrandList, type ErrandItem } from '@/api/errand'
+import EmptyState from '@/components/EmptyState.vue'
 
-const activeTab = ref<'all' | 'pending' | 'taken'>('all')
+const items = ref<ErrandItem[]>([])
 const searchQuery = ref('')
+const activeTab = ref<'all' | 'pending' | 'taken'>('all')
+const loading = ref(false)
 
-interface ErrandItem {
-  id: number
-  title: string
-  reward: number
-  pickup: string
-  delivery: string
-  deadline: string
-  status: string
-}
-
-const items: ErrandItem[] = [
-  { id: 1, title: '代取快递 — 北门驿站 中通2件', reward: 5, pickup: '北门驿站', delivery: '3号宿舍楼', deadline: '2026-06-28 18:00', status: '待接单' },
-  { id: 2, title: '代买早餐 — 食堂一楼 包子+豆浆', reward: 3, pickup: '食堂一楼', delivery: '5号教学楼301', deadline: '2026-06-29 08:00', status: '待接单' },
-  { id: 3, title: '帮忙搬行李 — 从2号楼到校门口', reward: 20, pickup: '2号宿舍楼', delivery: '学校南门', deadline: '2026-06-30 14:00', status: '待接单' },
-  { id: 4, title: '代还图书 — 图书馆3本', reward: 4, pickup: '1号宿舍楼', delivery: '图书馆还书处', deadline: '2026-06-28 17:00', status: '已接单' },
-  { id: 5, title: '代打印资料 — 论文20页', reward: 6, pickup: '线上发送', delivery: '2号教学楼', deadline: '2026-06-29 12:00', status: '已接单' },
-  { id: 6, title: '校园跑腿 — 交材料到教务处', reward: 8, pickup: '系办公室', delivery: '教务处（行政楼）', deadline: '2026-06-30 16:00', status: '待接单' },
-]
+onMounted(async () => {
+  loading.value = true
+  try {
+    const res = await getErrandList()
+    items.value = res.data
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredItems = computed(() => {
-  let result = items
-  if (activeTab.value === 'pending') result = result.filter(i => i.status === '待接单')
-  if (activeTab.value === 'taken') result = result.filter(i => i.status === '已接单')
+  let result = items.value
+  if (activeTab.value === 'pending')
+    result = result.filter(i => i.status === '待接单')
+  if (activeTab.value === 'taken')
+    result = result.filter(i => i.status !== '待接单')
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
-    result = result.filter(item => item.title.toLowerCase().includes(q) || item.pickup.toLowerCase().includes(q) || item.delivery.toLowerCase().includes(q))
+    result = result.filter(
+      item =>
+        item.title.toLowerCase().includes(q) ||
+        item.pickupLocation.toLowerCase().includes(q) ||
+        item.deliveryLocation.toLowerCase().includes(q)
+    )
   }
   return result
 })
 </script>
 
 <template>
-  <section class="page-errand">
+  <section class="page">
     <div class="page-header">
-      <h2>🏃 跑腿委托</h2>
+      <h1>🏃 跑腿委托</h1>
       <p>找人帮忙，省时省力。发布或接单校园跑腿任务。</p>
     </div>
 
@@ -75,8 +77,11 @@ const filteredItems = computed(() => {
       />
     </div>
 
+    <!-- 加载 -->
+    <p v-if="loading" class="empty-tip">加载中…</p>
+
     <!-- 列表 -->
-    <div class="errand-list">
+    <div v-else class="list">
       <div v-for="item in filteredItems" :key="item.id" class="errand-card">
         <div class="errand-header">
           <h3 class="errand-title">{{ item.title }}</h3>
@@ -84,48 +89,51 @@ const filteredItems = computed(() => {
             {{ item.status }}
           </span>
         </div>
+        <p class="errand-desc">{{ item.description }}</p>
         <div class="route-line">
-          <span class="route-point pickup">📦 {{ item.pickup }}</span>
+          <span class="route-point pickup">📦 {{ item.pickupLocation }}</span>
           <span class="route-arrow">→</span>
-          <span class="route-point delivery">📍 {{ item.delivery }}</span>
+          <span class="route-point delivery">📍 {{ item.deliveryLocation }}</span>
         </div>
         <div class="errand-footer">
           <span class="reward" v-if="item.reward > 0">💰 报酬 ¥{{ item.reward }}</span>
           <span class="reward free" v-else>🤝 免费帮忙</span>
-          <span class="deadline">⏰ {{ item.deadline }}</span>
+          <span class="deadline">⏰ {{ item.expectedTime }}</span>
         </div>
       </div>
-      <p v-if="!filteredItems.length" class="empty-tip">暂无跑腿任务</p>
+      <EmptyState
+        v-if="!loading && filteredItems.length === 0"
+        text="暂无跑腿任务"
+      />
     </div>
   </section>
 </template>
 
 <style scoped>
-.page-errand {
-  padding: 16px;
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
 }
 
-.page-header h2 {
-  color: #333;
-  font-size: 22px;
+.page-header h1 {
   margin: 0 0 8px;
 }
 
 .page-header p {
-  color: #999;
-  font-size: 14px;
   margin: 0;
+  color: #6b7280;
 }
 
 .tab-nav {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .tab-btn {
@@ -154,7 +162,6 @@ const filteredItems = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
   padding: 10px 14px;
   border: 1px solid #dcdfe6;
   border-radius: 8px;
@@ -185,15 +192,15 @@ const filteredItems = computed(() => {
   color: #c0c4cc;
 }
 
-.errand-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .errand-card {
   padding: 16px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   transition: box-shadow 0.2s;
 }
@@ -207,7 +214,7 @@ const filteredItems = computed(() => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .errand-title {
@@ -233,6 +240,17 @@ const filteredItems = computed(() => {
 .status-tag.taken {
   background: #ecf5ff;
   color: #409eff;
+}
+
+.errand-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .route-line {
@@ -277,5 +295,11 @@ const filteredItems = computed(() => {
   text-align: center;
   color: #999;
   padding: 32px 0;
+}
+
+@media (max-width: 600px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

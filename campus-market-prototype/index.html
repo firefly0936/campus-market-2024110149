@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!-- 文件名：index.html -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园轻集市 — 原型入口</title>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<link rel="stylesheet" href="assets/common.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .entry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .entry-group {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .entry-group h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E4E7ED;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .entry-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #606266;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+  }
+  .entry-link:hover {
+    background: #ECF5FF;
+    color: #409EFF;
+  }
+  .entry-link .el-tag { font-size: 11px; }
+  .hero {
+    text-align: center;
+    padding: 48px 20px 32px;
+  }
+  .hero h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #303133;
+    margin-bottom: 8px;
+  }
+  .hero p {
+    font-size: 16px;
+    color: #909399;
+    max-width: 600px;
+    margin: 0 auto 24px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Navbar -->
+  <header class="cm-navbar">
+    <div class="cm-container">
+      <a href="index.html" class="cm-logo">
+        <span style="font-size:24px">🏪</span> 校园轻集市
+      </a>
+      <nav class="cm-nav-links">
+        <a href="home.html">首页</a>
+        <a href="category.html">分类浏览</a>
+        <a href="publish.html">发布信息</a>
+        <a href="messages.html">消息</a>
+        <a href="profile.html">个人中心</a>
+      </nav>
+      <div class="cm-nav-right">
+        <a href="login.html"><el-button size="small">登录</el-button></a>
+        <a href="register.html"><el-button size="small" type="primary">注册</el-button></a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="cm-page">
+    <div class="cm-container">
+      <div class="hero">
+        <h1>🏪 校园轻集市 · 高保真原型</h1>
+        <p>覆盖浏览、搜索、详情、发布、消息、个人中心、管理审核等核心业务闭环的完整原型系统</p>
+        <el-tag type="success" size="large">22 个页面 · PC 端布局 · Element Plus + Tailwind CSS + Vue 3</el-tag>
+      </div>
+
+      <div class="entry-grid">
+        <!-- 核心业务页面 -->
+        <div class="entry-group">
+          <h2>📱 核心业务页面</h2>
+          <a href="home.html" class="entry-link">首页 / 信息流 <el-tag size="small" type="primary">home</el-tag></a>
+          <a href="category.html" class="entry-link">分类浏览页 <el-tag size="small">category</el-tag></a>
+          <a href="publish.html" class="entry-link">信息发布选择页 <el-tag size="small">publish</el-tag></a>
+          <a href="messages.html" class="entry-link">消息列表页 <el-tag size="small">messages</el-tag></a>
+          <a href="chat.html" class="entry-link">聊天详情页 <el-tag size="small">chat</el-tag></a>
+        </div>
+
+        <!-- 详情页 -->
+        <div class="entry-group">
+          <h2>📋 各分类详情页</h2>
+          <a href="item-detail.html" class="entry-link">二手商品详情 <el-tag size="small" type="primary">item-detail</el-tag></a>
+          <a href="lost-detail.html" class="entry-link">失物招领详情 <el-tag size="small" type="danger">lost-detail</el-tag></a>
+          <a href="group-detail.html" class="entry-link">拼单搭子详情 <el-tag size="small" type="success">group-detail</el-tag></a>
+          <a href="task-detail.html" class="entry-link">跑腿委托详情 <el-tag size="small" type="warning">task-detail</el-tag></a>
+        </div>
+
+        <!-- 发布页 -->
+        <div class="entry-group">
+          <h2>✏️ 各分类发布页</h2>
+          <a href="publish.html" class="entry-link">发布类型选择 <el-tag size="small">publish</el-tag></a>
+          <a href="publish-item.html" class="entry-link">发布二手商品 <el-tag size="small" type="primary">publish-item</el-tag></a>
+          <a href="publish-lost.html" class="entry-link">发布失物招领 <el-tag size="small" type="danger">publish-lost</el-tag></a>
+          <a href="publish-group.html" class="entry-link">发布拼单搭子 <el-tag size="small" type="success">publish-group</el-tag></a>
+          <a href="publish-task.html" class="entry-link">发布跑腿委托 <el-tag size="small" type="warning">publish-task</el-tag></a>
+        </div>
+
+        <!-- 个人中心 -->
+        <div class="entry-group">
+          <h2>👤 个人中心</h2>
+          <a href="profile.html" class="entry-link">个人中心 <el-tag size="small">profile</el-tag></a>
+          <a href="my-posts.html" class="entry-link">我的发布 <el-tag size="small">my-posts</el-tag></a>
+          <a href="favorites.html" class="entry-link">我的收藏 <el-tag size="small">favorites</el-tag></a>
+          <a href="settings.html" class="entry-link">账号设置 <el-tag size="small">settings</el-tag></a>
+        </div>
+
+        <!-- 账号 -->
+        <div class="entry-group">
+          <h2>🔐 账号相关</h2>
+          <a href="login.html" class="entry-link">登录页 <el-tag size="small">login</el-tag></a>
+          <a href="register.html" class="entry-link">注册页 <el-tag size="small">register</el-tag></a>
+        </div>
+
+        <!-- 管理端 -->
+        <div class="entry-group">
+          <h2>⚙️ 管理端</h2>
+          <a href="admin-dashboard.html" class="entry-link">管理端首页 <el-tag size="small" type="info">admin-dashboard</el-tag></a>
+          <a href="admin-review.html" class="entry-link">信息审核页 <el-tag size="small" type="info">admin-review</el-tag></a>
+        </div>
+      </div>
+
+      <div class="cm-footer">
+        <p>校园轻集市 Campus Light Market · 高保真原型系统</p>
+        <p style="margin-top:4px">Vue 3 + Element Plus + Tailwind CSS · PC 端 1440px 适配</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script>
+  const { createApp } = Vue
+  const app = createApp({})
+  app.use(ElementPlus)
+  app.mount('#app')
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分类浏览 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    .page-header { margin-bottom: 20px; }
+    .page-header h1 { font-size: 24px; font-weight: 700; }
+    .page-header .breadcrumb { font-size: 13px; color: #909399; margin-top: 4px; }
+    .breadcrumb a { color: #409EFF; text-decoration: none; }
+
+    .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .search-box { flex: 1; min-width: 260px; }
+    .filter-row { display: flex; gap: 12px; align-items: center; }
+
+    .list-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .list-card { background: #fff; border: 1px solid #E4E7ED; border-radius: 8px; padding: 20px; text-decoration: none; color: inherit; transition: all 0.2s; display: flex; gap: 16px; }
+    .list-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-color: #409EFF; }
+    .card-img { width: 120px; height: 100px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #F0F2F5; }
+    .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-title { font-size: 16px; font-weight: 600; margin: 0; flex: 1; }
+    .card-desc { font-size: 13px; color: #6B7280; line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: auto; }
+    .card-meta span { font-size: 12px; color: #909399; background: #F0F2F5; padding: 2px 8px; border-radius: 4px; }
+    .card-price { font-size: 20px; font-weight: 700; }
+    .card-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+
+    .pagination-wrap { display: flex; justify-content: center; margin-top: 24px; }
+
+    @media (max-width: 768px) { .list-grid { grid-template-columns: 1fr; } .list-card { flex-direction: column; } .card-img { width: 100%; height: 160px; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <a href="home.html" class="logo">🎓 校园轻集市</a>
+        <span class="slogan">轻量、可信、面向校园生活</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li>
+        <li><a href="category.html" class="active">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="3" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <div class="page-header">
+        <div class="breadcrumb"><a href="home.html">首页</a> / 分类浏览</div>
+        <h1>📋 集市列表</h1>
+      </div>
+
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="search-box">
+          <el-input v-model="search" placeholder="搜索物品名称、地点或分类…" clearable :prefix-icon="Search" />
+        </div>
+        <div class="filter-row">
+          <el-select v-model="sortBy" placeholder="排序方式" style="width:140px;">
+            <el-option label="最新发布" value="newest" />
+            <el-option label="价格从低到高" value="price-asc" />
+            <el-option label="价格从高到低" value="price-desc" />
+          </el-select>
+          <el-select v-model="location" placeholder="地点筛选" clearable style="width:140px;">
+            <el-option label="图书馆" value="图书馆" />
+            <el-option label="食堂" value="食堂" />
+            <el-option label="教学楼" value="教学楼" />
+            <el-option label="宿舍楼" value="宿舍楼" />
+            <el-option label="校门口" value="校门口" />
+          </el-select>
+        </div>
+      </div>
+
+      <!-- 分类 Tab -->
+      <el-tabs v-model="activeTab" style="margin-bottom:20px;">
+        <el-tab-pane label="全部" name="all" />
+        <el-tab-pane label="🛒 二手交易" name="secondHand" />
+        <el-tab-pane label="🔍 失物招领" name="lostAndFound" />
+        <el-tab-pane label="🤝 拼单搭子" name="groupBuy" />
+        <el-tab-pane label="🏃 跑腿委托" name="errand" />
+      </el-tabs>
+
+      <!-- 列表 -->
+      <div class="list-grid">
+        <a v-for="item in filteredItems" :key="item.id" :href="item.link" class="list-card">
+          <img :src="item.image" :alt="item.title" class="card-img" @error="e => e.target.style.display='none'" />
+          <div class="card-body">
+            <div class="card-top">
+              <h3 class="card-title">{{ item.title }}</h3>
+              <span class="card-tag" :style="{ background: item.tagBg, color: item.tagColor }">{{ item.tag }}</span>
+            </div>
+            <p class="card-desc">{{ item.desc }}</p>
+            <div class="card-meta">
+              <span>📍 {{ item.location }}</span>
+              <span>🕐 {{ item.time }}</span>
+              <span v-if="item.extra">📌 {{ item.extra }}</span>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+              <span :style="{ fontSize:'20px',fontWeight:700,color: item.price === '免费' ? '#67C23A' : '#E6A23C' }">{{ item.price }}</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <!-- 空状态 -->
+      <el-empty v-if="filteredItems.length === 0" description="暂无符合条件的条目" />
+
+      <!-- 分页 -->
+      <div class="pagination-wrap">
+        <el-pagination background layout="prev, pager, next" :total="totalItems" :page-size="6" v-model:current-page="currentPage" />
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          Search: ElementPlusIconsVue.Search,
+          search: '',
+          sortBy: 'newest',
+          location: '',
+          activeTab: 'all',
+          currentPage: 1,
+          allItems: [
+            { id:1, title:'九成新 iPad Air — 考研结束出', desc:'2025 款 iPad Air 11 寸，深空灰，128GB WiFi 版，几乎全新，带保护壳和充电器。考研上岸闲置出售。', price:'¥3,200', location:'图书馆一楼', time:'2小时前', extra:'九成新', tag:'在售', tagBg:'#EFF6FF', tagColor:'#2563EB', category:'secondHand', link:'item-detail.html', image:'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=240' },
+            { id:2, title:'考研数学复习全书（李永乐全套）', desc:'2026版三件套，包括复习全书、基础过关660题、历年真题。只做了前60页，其余全新。', price:'¥45', location:'东区食堂门口', time:'5小时前', extra:'七成新', tag:'在售', tagBg:'#EFF6FF', tagColor:'#2563EB', category:'secondHand', link:'item-detail.html', image:'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=240' },
+            { id:3, title:'二手山地自行车 — 毕业低价出', desc:'美利达公爵600，26寸，17寸车架。日常通勤使用，车况良好，前后变速正常，送车锁。', price:'¥680', location:'西区3栋车棚', time:'8小时前', extra:'七成新', tag:'在售', tagBg:'#EFF6FF', tagColor:'#2563EB', category:'secondHand', link:'item-detail.html', image:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=240' },
+            { id:4, title:'IKBC 机械键盘 C87 — 红轴', desc:'ikbc C87 樱桃红轴机械键盘，用了不到半年，键帽无打油，包装盒还在。换了无线键盘所以出。', price:'¥120', location:'实验楼201', time:'12小时前', extra:'八成新', tag:'在售', tagBg:'#EFF6FF', tagColor:'#2563EB', category:'secondHand', link:'item-detail.html', image:'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=240' },
+            { id:11, title:'遗失校园卡一张 — 图书馆二楼', desc:'蓝色卡套，贴有猫猫贴纸，卡号后四位3821。6月26日下午遗失。', price:'—', location:'图书馆二楼自习区', time:'3小时前', extra:'未解决', tag:'失物', tagBg:'#FEF2F2', tagColor:'#DC2626', category:'lostAndFound', link:'lost-detail.html', image:'https://images.unsplash.com/photo-1580541832625-2c2f4e2c44a4?w=240' },
+            { id:12, title:'捡到一串钥匙 — 图书馆门口', desc:'4把钥匙，挂有哆啦A梦挂件。请失主联系认领。', price:'—', location:'图书馆入口', time:'4小时前', extra:'未解决', tag:'招领', tagBg:'#F0FDF4', tagColor:'#16A34A', category:'lostAndFound', link:'lost-detail.html', image:'https://images.unsplash.com/photo-1622428722068-5a4d72fad7f4?w=240' },
+            { id:13, title:'遗失 AirPods Pro 充电盒', desc:'白色充电盒，外壳有轻微刮痕。耳机还在，只丢了充电盒。操场跑步时遗失。', price:'—', location:'操场', time:'6小时前', extra:'未解决', tag:'失物', tagBg:'#FEF2F2', tagColor:'#DC2626', category:'lostAndFound', link:'lost-detail.html', image:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=240' },
+            { id:14, title:'捡到 U 盘 — 二食堂餐桌', desc:'银色金士顿32GB，内有课程资料。请失主说明文件内容验证身份。', price:'—', location:'二食堂', time:'7小时前', extra:'未解决', tag:'招领', tagBg:'#F0FDF4', tagColor:'#16A34A', category:'lostAndFound', link:'lost-detail.html', image:'https://images.unsplash.com/photo-1544731612-de1548fb479b?w=240' },
+            { id:21, title:'奶茶拼单 — 满5杯减15元', desc:'南门奶茶店，招牌波波奶茶原价15元/杯，拼单后平均每人省3元。下午一起去拿。', price:'¥12/人', location:'南门奶茶店', time:'5小时前', extra:'3/5人', tag:'拼单中', tagBg:'#FDF6EC', tagColor:'#E6A23C', category:'groupBuy', link:'group-detail.html', image:'https://images.unsplash.com/photo-1558857563-b371033873b8?w=240' },
+            { id:22, title:'外卖满减拼单 — 满50减20', desc:'某团外卖满50减20，我点了黄焖鸡米饭22元，还差28元凑满减。', price:'¥22起', location:'2号宿舍楼下', time:'6小时前', extra:'1/3人', tag:'拼单中', tagBg:'#FDF6EC', tagColor:'#E6A23C', category:'groupBuy', link:'group-detail.html', image:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240' },
+            { id:23, title:'A4打印纸整箱团购', desc:'A4纸70g整箱5包×500张，原价89元，团购10人成团价69元/人。期末复习刚需。', price:'¥69', location:'教学楼一楼大厅', time:'8小时前', extra:'8/10人', tag:'即将成团', tagBg:'#F0FDF4', tagColor:'#16A34A', category:'groupBuy', link:'group-detail.html', image:'https://images.unsplash.com/photo-1586075010923-2dd457eb4bab?w=240' },
+            { id:31, title:'帮取快递到宿舍楼下', desc:'北门菜鸟驿站取2个中通快递，送到西区5栋楼下。快递较轻，都是衣服。', price:'¥5', location:'西区5栋', time:'6小时前', extra:'待接单', tag:'待接单', tagBg:'#FDF6EC', tagColor:'#E6A23C', category:'errand', link:'task-detail.html', image:'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=240' },
+            { id:32, title:'帮忙搬行李 — 宿舍到校门口', desc:'期末离校，2个行李箱+3个袋子。从2号宿舍楼4楼搬到学校南门约500米。可用推车。', price:'¥25', location:'学校南门', time:'9小时前', extra:'待接单', tag:'待接单', tagBg:'#FDF6EC', tagColor:'#E6A23C', category:'errand', link:'task-detail.html', image:'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=240' },
+            { id:33, title:'帮买晚餐 — 二食堂到实验楼', desc:'鱼香肉丝盖饭+冰红茶，送到实验楼302。18:30前送到，做实验出不去。', price:'¥8', location:'实验楼302', time:'4小时前', extra:'已接单', tag:'已接单', tagBg:'#ECF5FF', tagColor:'#409EFF', category:'errand', link:'task-detail.html', image:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240' },
+          ],
+        }
+      },
+      computed: {
+        filteredItems() {
+          let items = this.allItems
+          if (this.activeTab !== 'all') items = items.filter(i => i.category === this.activeTab)
+          if (this.search.trim()) {
+            const q = this.search.trim().toLowerCase()
+            items = items.filter(i => i.title.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || i.location.toLowerCase().includes(q))
+          }
+          if (this.location) items = items.filter(i => i.location.includes(this.location))
+          if (this.sortBy === 'price-asc') items = [...items].sort((a,b) => parseFloat(a.price.replace(/[^0-9.]/g,'')) - parseFloat(b.price.replace(/[^0-9.]/g,'')))
+          if (this.sortBy === 'price-desc') items = [...items].sort((a,b) => parseFloat(b.price.replace(/[^0-9.]/g,'')) - parseFloat(a.price.replace(/[^0-9.]/g,'')))
+          return items
+        },
+        totalItems() { return this.filteredItems.length },
+      }
+    })
+    app.use(ElementPlus)
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component)
+    }
+    app.mount('#app')
+  </script>
+</body>
+</html>

@@ -1,39 +1,345 @@
 <script setup lang="ts">
-// 详情页 — 接收路由 id 参数，展示对应条目详情
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAsync } from '@/composables/useAsync'
+import { getSecondHandDetail, type SecondHandItem } from '@/api/secondHand'
+import { getLostFoundDetail, type LostFoundItem } from '@/api/lostFound'
+import { getGroupBuyDetail, type GroupBuyItem } from '@/api/groupBuy'
+import { getErrandDetail, type ErrandItem } from '@/api/errand'
+import ItemCard from '@/components/ItemCard.vue'
+import EmptyState from '@/components/EmptyState.vue'
+
+type DetailItem = SecondHandItem | LostFoundItem | GroupBuyItem | ErrandItem
 
 const route = useRoute()
-const itemId = route.params.id
+const router = useRouter()
+const type = route.params.type as string
+const id = Number(route.params.id)
+
+/** 根据 type 选择对应的 API */
+const apiMap: Record<string, (id: number) => Promise<{ data: DetailItem }>> = {
+  secondHand: (id) => getSecondHandDetail(id),
+  lostAndFound: (id) => getLostFoundDetail(id),
+  groupBuy: (id) => getGroupBuyDetail(id),
+  errand: (id) => getErrandDetail(id),
+}
+
+const fetchDetail = apiMap[type]
+  ? () => apiMap[type](id).then(res => res.data)
+  : () => Promise.reject(new Error(`未知类型: ${type}`))
+
+const { data: item, loading, error, execute } = useAsync(fetchDetail)
+
+onMounted(() => execute())
+
+/** 类型中文映射 */
+const typeLabel: Record<string, string> = {
+  secondHand: '二手交易',
+  lostAndFound: '失物招领',
+  groupBuy: '拼单搭子',
+  errand: '跑腿委托',
+}
+
+/** 类型对应的列表页 */
+const listLink: Record<string, string> = {
+  secondHand: '/trade',
+  lostAndFound: '/lost-found',
+  groupBuy: '/group-buy',
+  errand: '/errand',
+}
+
+/** 从 item 中提取通用展示字段 */
+const displayFields = computed(() => {
+  if (!item.value) return []
+  const i = item.value as Record<string, unknown>
+  const fields: { label: string; value: string }[] = []
+
+  if (type === 'secondHand') {
+    if (i.price !== undefined) fields.push({ label: '价格', value: i.price === 0 ? '免费' : `¥${i.price}` })
+    if (i.category) fields.push({ label: '分类', value: String(i.category) })
+    if (i.condition) fields.push({ label: '成色', value: String(i.condition) })
+    if (i.tradeLocation) fields.push({ label: '交易地点', value: String(i.tradeLocation) })
+    if (i.status) fields.push({ label: '状态', value: String(i.status) })
+  } else if (type === 'lostAndFound') {
+    if (i.type) fields.push({ label: '类型', value: String(i.type) })
+    if (i.location) fields.push({ label: '地点', value: String(i.location) })
+    if (i.lostDate) fields.push({ label: '时间', value: String(i.lostDate) })
+    if (i.status) fields.push({ label: '状态', value: String(i.status) })
+  } else if (type === 'groupBuy') {
+    if (i.targetCount !== undefined && i.currentCount !== undefined)
+      fields.push({ label: '拼单进度', value: `${i.currentCount}/${i.targetCount} 人` })
+    if (i.deadline) fields.push({ label: '截止日期', value: String(i.deadline) })
+    if (i.meetingLocation) fields.push({ label: '集合地点', value: String(i.meetingLocation) })
+    if (i.status) fields.push({ label: '状态', value: String(i.status) })
+  } else if (type === 'errand') {
+    if (i.reward !== undefined) fields.push({ label: '报酬', value: i.reward === 0 ? '免费帮忙' : `¥${i.reward}` })
+    if (i.pickupLocation) fields.push({ label: '取件地点', value: String(i.pickupLocation) })
+    if (i.deliveryLocation) fields.push({ label: '送达地点', value: String(i.deliveryLocation) })
+    if (i.expectedTime) fields.push({ label: '期望完成', value: String(i.expectedTime) })
+    if (i.status) fields.push({ label: '状态', value: String(i.status) })
+  }
+
+  return fields
+})
+
+const showContact = ref(false)
+const contactInfo = computed(() => {
+  if (!item.value) return ''
+  const i = item.value as Record<string, unknown>
+  return String(i.contact || '暂无联系方式')
+})
+
+function goBack() {
+  const target = listLink[type] || '/market'
+  router.push(target)
+}
 </script>
 
 <template>
   <section class="page-detail">
-    <h2>详情页</h2>
-    <p>当前查看条目 ID：<strong>{{ itemId }}</strong></p>
-    <p>从列表页携带 id 参数跳转而来。</p>
+    <!-- 面包屑 -->
+    <nav class="breadcrumb">
+      <RouterLink to="/">首页</RouterLink>
+      <span> / </span>
+      <RouterLink :to="listLink[type] || '/market'">
+        {{ typeLabel[type] || '分类浏览' }}
+      </RouterLink>
+      <span> / </span>
+      <span class="current">详情</span>
+    </nav>
 
-    <div class="back-link">
-      <RouterLink to="/market">← 返回列表</RouterLink>
+    <!-- loading 态 -->
+    <div v-if="loading" class="state-box">
+      <p class="state-text">加载中…</p>
     </div>
+
+    <!-- error 态 -->
+    <div v-else-if="error" class="state-box state-error">
+      <p class="state-text">⚠️ {{ error }}</p>
+      <button class="retry-btn" @click="execute()">重试</button>
+    </div>
+
+    <!-- empty 态 -->
+    <div v-else-if="!item" class="state-box">
+      <EmptyState text="未找到该条目" />
+    </div>
+
+    <!-- 正常态 -->
+    <template v-else>
+      <ItemCard
+        :title="(item as any).title || ''"
+        :status="displayFields.find(f => f.label === '状态')?.value"
+        status-class="tag--info"
+        :tag="typeLabel[type]"
+        tag-class="tag--type"
+      >
+        <!-- 图片（如有） -->
+        <template v-if="(item as any).images?.length" #description>
+          <div class="image-row">
+            <img
+              v-for="(img, idx) in (item as any).images"
+              :key="idx"
+              :src="img"
+              class="detail-image"
+              @error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
+            />
+          </div>
+        </template>
+
+        <!-- 描述 -->
+        <template #description>
+          <p class="desc-text">{{ (item as any).description }}</p>
+        </template>
+
+        <!-- 关键字段 -->
+        <template #meta>
+          <div class="field-grid">
+            <div v-for="f in displayFields" :key="f.label" class="field-item">
+              <span class="field-label">{{ f.label }}</span>
+              <span
+                class="field-value"
+                :class="{
+                  'text-green': f.value === '免费' || f.value === '免费帮忙' || f.value === '已解决',
+                  'text-orange': f.value === '待接单' || f.value === '未解决',
+                  'text-blue': f.value === '已接单' || f.value === '在售',
+                }"
+              >
+                {{ f.value }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- 联系方式 + 操作 -->
+        <template #footer>
+          <div class="footer-row">
+            <button class="contact-btn" @click="showContact = !showContact">
+              {{ showContact ? '隐藏联系方式' : '📱 查看联系方式' }}
+            </button>
+            <button class="back-btn" @click="goBack">← 返回列表</button>
+          </div>
+          <div v-if="showContact" class="contact-info">
+            {{ contactInfo }}
+          </div>
+        </template>
+      </ItemCard>
+    </template>
   </section>
 </template>
 
 <style scoped>
 .page-detail {
+  max-width: 800px;
+  margin: 0 auto;
   padding: 16px;
 }
 
-.page-detail strong {
-  color: #409eff;
-  font-size: 18px;
+.breadcrumb {
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #909399;
 }
-
-.back-link {
-  margin-top: 20px;
-}
-
-.back-link a {
+.breadcrumb a {
   color: #409eff;
   text-decoration: none;
+}
+.breadcrumb .current {
+  color: #303133;
+}
+
+/* 状态容器 */
+.state-box {
+  text-align: center;
+  padding: 48px 24px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+}
+.state-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.state-text {
+  color: #6b7280;
+  font-size: 15px;
+}
+.retry-btn {
+  margin-top: 12px;
+  padding: 8px 24px;
+  border: 1px solid #409eff;
+  background: #fff;
+  color: #409eff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.retry-btn:hover {
+  background: #409eff;
+  color: #fff;
+}
+
+/* 图片 */
+.image-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.detail-image {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+}
+
+/* 描述 */
+.desc-text {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* 字段网格 */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.field-item {
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field-label {
+  font-size: 12px;
+  color: #909399;
+}
+.field-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+.text-green {
+  color: #67c23a;
+}
+.text-orange {
+  color: #e6a23c;
+}
+.text-blue {
+  color: #409eff;
+}
+
+/* 底部操作 */
+.footer-row {
+  display: flex;
+  gap: 12px;
+}
+.contact-btn {
+  padding: 10px 24px;
+  background: #409eff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.contact-btn:hover {
+  background: #337ecc;
+}
+.back-btn {
+  padding: 10px 24px;
+  background: #fff;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.back-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+.contact-info {
+  margin-top: 10px;
+  padding: 12px;
+  background: #ecf5ff;
+  border: 1px solid #c6e2ff;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #303133;
+}
+
+@media (max-width: 600px) {
+  .field-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

@@ -4,6 +4,7 @@ export interface ErrandItem {
   id: number
   title: string
   description: string
+  taskType: string
   reward: number
   pickupLocation: string
   deliveryLocation: string

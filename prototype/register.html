@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #ECF5FF 0%, #F5F7FA 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .reg-wrapper { width: 460px; }
+    .reg-header { text-align: center; margin-bottom: 32px; }
+    .reg-header h1 { font-size: 28px; font-weight: 700; color: #303133; margin-bottom: 8px; }
+    .reg-card { background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+    .reg-footer { text-align: center; margin-top: 20px; font-size: 14px; color: #909399; }
+    .reg-footer a { color: #409EFF; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="reg-wrapper">
+      <div class="reg-header">
+        <h1>🎓 校园轻集市</h1>
+        <p>创建你的校园账号</p>
+      </div>
+
+      <div class="reg-card">
+        <el-steps :active="step" align-center style="margin-bottom:28px;" finish-status="success">
+          <el-step title="填写信息" /><el-step title="验证身份" /><el-step title="注册成功" />
+        </el-steps>
+
+        <el-form v-if="step === 0" size="large">
+          <el-form-item><el-input v-model="form.nickname" placeholder="昵称" :prefix-icon="User" /></el-form-item>
+          <el-form-item><el-input v-model="form.studentId" placeholder="学号" /></el-form-item>
+          <el-form-item><el-select v-model="form.dept" placeholder="选择学院" style="width:100%"><el-option label="计算机科学与技术学院" value="cs" /><el-option label="经济管理学院" value="em" /><el-option label="外国语学院" value="fl" /><el-option label="电子信息学院" value="ee" /></el-select></el-form-item>
+          <el-form-item><el-input v-model="form.email" placeholder="邮箱" /></el-form-item>
+          <el-form-item><el-input v-model="form.password" type="password" placeholder="设置密码（至少6位）" :prefix-icon="Lock" show-password /></el-form-item>
+          <el-form-item><el-input v-model="form.confirmPwd" type="password" placeholder="确认密码" :prefix-icon="Lock" show-password /></el-form-item>
+          <el-button type="primary" size="large" style="width:100%;" @click="nextStep">下一步</el-button>
+        </el-form>
+
+        <div v-else-if="step === 1" style="text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">📧</div>
+          <p style="font-size:15px;color:#606266;margin-bottom:20px;">验证邮件已发送至<br/><strong>{{ form.email }}</strong></p>
+          <el-input v-model="verifyCode" placeholder="输入收到的验证码" size="large" maxlength="6" style="margin-bottom:16px;" />
+          <el-button type="primary" size="large" style="width:100%;" @click="register">完成注册</el-button>
+        </div>
+
+        <div v-else style="text-align:center;padding:20px 0;">
+          <div style="font-size:64px;margin-bottom:12px;">🎉</div>
+          <h3 style="font-size:20px;color:#67C23A;margin-bottom:8px;">注册成功！</h3>
+          <p style="color:#909399;margin-bottom:20px;">欢迎加入校园轻集市</p>
+          <el-button type="primary" size="large" @click="window.location='home.html'">开始使用</el-button>
+        </div>
+      </div>
+
+      <div class="reg-footer">
+        已有账号？<a href="login.html">立即登录</a> | <a href="home.html">返回首页</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          User: ElementPlusIconsVue.User, Lock: ElementPlusIconsVue.Lock,
+          step: 0, verifyCode: '',
+          form: { nickname:'', studentId:'', dept:'', email:'', password:'', confirmPwd:'' },
+        }
+      },
+      methods: {
+        nextStep() {
+          const f = this.form
+          if (!f.nickname || !f.studentId || !f.dept || !f.email || !f.password) { this.$message.warning('请填写所有字段'); return }
+          if (f.password !== f.confirmPwd) { this.$message.error('两次密码不一致'); return }
+          if (f.password.length < 6) { this.$message.warning('密码至少6位'); return }
+          this.step = 1
+        },
+        register() {
+          if (!this.verifyCode) { this.$message.warning('请输入验证码'); return }
+          this.$message.success('验证成功'); this.step = 2
+        },
+      }
+    })
+    app.use(ElementPlus); app.mount('#app')
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@ export interface GroupBuyItem {
   id: number
   title: string
   description: string
+  groupType: string
   targetCount: number
   currentCount: number
   deadline: string

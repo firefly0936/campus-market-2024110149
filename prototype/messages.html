@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消息列表 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; }
+    .nav-links a:hover, .nav-links a.active { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .msg-layout { display: grid; grid-template-columns: 340px 1fr; gap: 0; background: #fff; border-radius: 12px; border: 1px solid #E4E7ED; overflow: hidden; min-height: 600px; }
+    .msg-sidebar { border-right: 1px solid #F0F2F5; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 16px; border-bottom: 1px solid #F0F2F5; }
+    .sidebar-header h2 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .chat-list { flex: 1; overflow-y: auto; }
+    .chat-item { display: flex; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #F5F7FA; text-decoration: none; color: inherit; }
+    .chat-item:hover, .chat-item.active { background: #ECF5FF; }
+    .chat-item.unread { background: #F0F7FF; }
+    .chat-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .chat-info { flex: 1; min-width: 0; }
+    .chat-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .chat-last { font-size: 13px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-time { font-size: 12px; color: #C0C4CC; }
+    .unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: #409EFF; color: #fff; border-radius: 10px; font-size: 12px; margin-left: 6px; }
+    .msg-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #909399; }
+    @media (max-width: 768px) { .msg-layout { grid-template-columns: 1fr; } .msg-sidebar { border-right: none; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand"><a href="home.html" class="logo">🎓 校园轻集市</a><span class="slogan">轻量、可信、面向校园生活</span></div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li><li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html" class="active">消息<el-badge :value="unreadTotal" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <div class="msg-layout">
+        <!-- 左侧会话列表 -->
+        <div class="msg-sidebar">
+          <div class="sidebar-header">
+            <h2>📬 消息</h2>
+            <el-input v-model="searchContact" placeholder="搜索联系人…" :prefix-icon="Search" size="small" clearable />
+            <div style="display:flex;gap:8px;margin-top:10px;">
+              <el-button size="small" :type="activeTab === 'all' ? 'primary' : ''" @click="activeTab = 'all'">全部</el-button>
+              <el-button size="small" :type="activeTab === 'unread' ? 'primary' : ''" @click="activeTab = 'unread'">
+                未读<span v-if="unreadTotal" style="margin-left:4px;">({{ unreadTotal }})</span>
+              </el-button>
+            </div>
+          </div>
+
+          <div class="chat-list">
+            <a v-for="chat in filteredChats" :key="chat.id" :href="'chat.html?id=' + chat.id" class="chat-item" :class="{ unread: chat.unread > 0, active: activeChat === chat.id }" @click="activeChat = chat.id">
+              <img :src="chat.avatar" class="chat-avatar" @error="e => e.target.style.display='none'" />
+              <div class="chat-info">
+                <div class="chat-name">
+                  <span>{{ chat.name }}</span>
+                  <span class="chat-time">{{ chat.time }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span class="chat-last">{{ chat.lastMsg }}</span>
+                  <span v-if="chat.unread > 0" class="unread-badge">{{ chat.unread }}</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- 右侧空白提示 -->
+        <div class="msg-empty">
+          <div style="text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">💬</div>
+            <p style="font-size:15px;">选择一个会话查看消息</p>
+            <p style="font-size:13px;color:#C0C4CC;">点击左侧联系人开始聊天</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          Search: ElementPlusIconsVue.Search,
+          searchContact: '', activeTab: 'all', activeChat: 1,
+          chats: [
+            { id:1, name:'计算机学院小明', avatar:'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80', lastMsg:'你好，iPad Air还在吗？', time:'10:30', unread:2, type:'trade' },
+            { id:2, name:'经管学院小红', avatar:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80', lastMsg:'奶茶拼单还差1人，你要来吗？', time:'昨天', unread:0, type:'group' },
+            { id:3, name:'校园轻集市', avatar:'', lastMsg:'你的发布信息已通过审核', time:'昨天', unread:1, type:'system' },
+            { id:4, name:'外语学院小刚', avatar:'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80', lastMsg:'好的，今天下午图书馆见', time:'周一', unread:0, type:'chat' },
+            { id:5, name:'电信学院小美', avatar:'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=80', lastMsg:'跑步的时候捡到的，怎么还给你？', time:'周一', unread:3, type:'lost' },
+            { id:6, name:'校园轻集市', avatar:'', lastMsg:'考研数学全书有新的咨询消息', time:'6月25日', unread:0, type:'system' },
+            { id:7, name:'跑腿小哥', avatar:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80', lastMsg:'快递已放在门卫处，记得取', time:'6月24日', unread:0, type:'chat' },
+          ],
+        }
+      },
+      computed: {
+        filteredChats() {
+          let list = this.activeTab === 'unread' ? this.chats.filter(c => c.unread > 0) : this.chats
+          if (this.searchContact.trim()) {
+            const q = this.searchContact.trim().toLowerCase()
+            list = list.filter(c => c.name.toLowerCase().includes(q) || c.lastMsg.toLowerCase().includes(q))
+          }
+          return list
+        },
+        unreadTotal() { return this.chats.reduce((s, c) => s + c.unread, 0) },
+      }
+    })
+    app.use(ElementPlus)
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) { app.component(key, component) }
+    app.mount('#app')
+  </script>
+</body>
+</html>

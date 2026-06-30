@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布失物招领 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .publish-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+    .form-card { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #E4E7ED; }
+    .form-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .side-card { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #E4E7ED; margin-bottom: 20px; position: sticky; top: 84px; }
+    .type-toggle { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid #DCDFE6; }
+    .type-btn { flex: 1; padding: 12px; border: none; background: #fff; font-size: 15px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .type-btn.active-lost { background: #FEF2F2; color: #DC2626; font-weight: 600; }
+    .type-btn.active-found { background: #F0FDF4; color: #16A34A; font-weight: 600; }
+    .upload-area { border: 2px dashed #DCDFE6; border-radius: 8px; padding: 32px; text-align: center; transition: all 0.2s; cursor: pointer; }
+    .upload-area:hover { border-color: #409EFF; background: #F0F7FF; }
+    .notice-box { margin-top: 24px; padding: 16px; background: #FDF6EC; border-radius: 8px; font-size: 13px; color: #8A6D3B; }
+    @media (max-width: 768px) { .publish-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <a href="home.html" class="logo">🎓 校园轻集市</a>
+        <span class="slogan">轻量、可信、面向校园生活</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li>
+        <li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="3" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <el-breadcrumb separator="/" style="margin-bottom:20px;">
+        <el-breadcrumb-item :to="{ path: 'home.html' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: 'publish.html' }">发布信息</el-breadcrumb-item>
+        <el-breadcrumb-item>发布失物招领</el-breadcrumb-item>
+      </el-breadcrumb>
+
+      <el-steps :active="1" align-center style="margin-bottom:28px;">
+        <el-step title="选择分类" />
+        <el-step title="填写信息" />
+        <el-step title="提交发布" />
+      </el-steps>
+
+      <div class="publish-layout">
+        <div class="form-card">
+          <h2>🔍 发布失物招领信息</h2>
+
+          <el-form label-position="top" size="large">
+            <!-- 失物/招领切换 -->
+            <el-form-item label="信息类型" required>
+              <div class="type-toggle">
+                <button type="button" class="type-btn" :class="{ 'active-lost': form.lfType === '失物' }" @click="form.lfType = '失物'" style="border-right:1px solid #DCDFE6;">
+                  🔴 我丢了东西
+                </button>
+                <button type="button" class="type-btn" :class="{ 'active-found': form.lfType === '招领' }" @click="form.lfType = '招领'">
+                  🟢 我捡到了东西
+                </button>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="物品名称" required>
+              <el-input v-model="form.title" :placeholder="form.lfType === '失物' ? '例如：遗失校园卡一张 — 图书馆二楼' : '例如：捡到一串钥匙 — 图书馆门口'" maxlength="50" show-word-limit />
+            </el-form-item>
+
+            <el-form-item label="物品分类">
+              <el-select v-model="form.category" style="width:100%;">
+                <el-option label="校园卡/证件" value="card" />
+                <el-option label="电子产品" value="electronics" />
+                <el-option label="钥匙" value="keys" />
+                <el-option label="眼镜" value="glasses" />
+                <el-option label="水杯" value="bottle" />
+                <el-option label="书籍" value="books" />
+                <el-option label="衣物" value="clothing" />
+                <el-option label="其他" value="other" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item :label="form.lfType === '失物' ? '丢失时间' : '拾到时间'" required>
+              <el-date-picker v-model="form.eventDate" type="date" placeholder="选择日期" style="width:100%;" />
+            </el-form-item>
+
+            <el-form-item :label="form.lfType === '失物' ? '丢失地点' : '拾到地点'" required>
+              <el-input v-model="form.location" placeholder="例如：图书馆二楼自习区 / 二食堂靠窗12号桌" />
+            </el-form-item>
+
+            <el-form-item label="物品图片">
+              <div class="upload-area">
+                <div v-if="!form.image" style="color:#909399;">
+                  <div style="font-size:36px;margin-bottom:8px;">📷</div>
+                  <div>点击上传物品图片</div>
+                  <div style="font-size:12px;margin-top:4px;">有图片更容易被认领</div>
+                </div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="联系方式" required>
+              <el-input v-model="form.contact" placeholder="微信号 / QQ号 / 手机号" />
+            </el-form-item>
+
+            <el-form-item label="物品特征描述" required>
+              <el-input v-model="form.description" type="textarea" :rows="4" :placeholder="form.lfType === '失物' ? '描述丢失物品的特征：颜色、品牌、大小、特殊标记等…' : '描述拾到物品的特征：颜色、品牌、大小、特殊标记等…'" maxlength="500" show-word-limit />
+            </el-form-item>
+
+            <div class="notice-box">
+              <strong>⚠️ 发布须知</strong>
+              <ul style="margin-top:6px;padding-left:18px;">
+                <li v-if="form.lfType === '招领'">拾到贵重物品建议先交到学校保卫处登记</li>
+                <li>请让认领者描述物品特征以验证身份</li>
+                <li>物品归还后请及时标记为"已解决"</li>
+              </ul>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:24px;">
+              <el-button size="large" style="flex:1;" @click="saveDraft">💾 保存草稿</el-button>
+              <el-button type="primary" size="large" style="flex:1;" @click="submitted = true">发布信息</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <aside>
+          <div class="side-card">
+            <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">💡 填写提示</h3>
+            <ul style="font-size:13px;color:#606266;line-height:2;padding-left:18px;">
+              <li>标题写清物品名称和地点</li>
+              <li>尽量描述物品的显著特征</li>
+              <li>如果有照片，大大提升找回概率</li>
+              <li>拾到校园卡建议直接交到卡务中心</li>
+              <li>贵重物品建议联系保卫处备案</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <el-dialog v-model="submitted" title="发布成功" width="420px" center>
+        <div style="text-align:center;padding:20px 0;">
+          <div style="font-size:56px;margin-bottom:12px;">✅</div>
+          <p style="font-size:16px;color:#303133;">{{ form.lfType }}信息已发布</p>
+          <p style="font-size:13px;color:#909399;margin-top:8px;">有人认领或归还后请及时更新状态</p>
+        </div>
+        <template #footer>
+          <el-button @click="submitted = false">继续发布</el-button>
+          <el-button type="primary" @click="window.location='category.html'">查看集市</el-button>
+        </template>
+      </el-dialog>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          submitted: false,
+          form: { lfType:'失物', title:'', category:'', eventDate:'', location:'', image:'', contact:'', description:'' },
+        }
+      },
+      methods: {
+        saveDraft() { this.$message.success('草稿已保存到本地'); }
+      }
+    })
+    app.use(ElementPlus)
+    app.mount('#app')
+  </script>
+</body>
+</html>

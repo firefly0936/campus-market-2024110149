@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拼单搭子详情 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .detail-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+    .main-card { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #E4E7ED; }
+    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .detail-header h1 { font-size: 24px; font-weight: 700; flex: 1; }
+    .detail-meta { display: flex; gap: 20px; margin-bottom: 20px; font-size: 13px; color: #909399; }
+    .progress-section { padding: 20px; background: #F0F9FF; border-radius: 8px; margin-bottom: 24px; }
+    .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; color: #303133; }
+    .desc-text { font-size: 14px; color: #606266; line-height: 1.8; margin-bottom: 24px; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .info-item { padding: 12px; background: #F5F7FA; border-radius: 6px; }
+    .info-item .label { font-size: 12px; color: #909399; margin-bottom: 4px; }
+    .info-item .value { font-size: 14px; color: #303133; font-weight: 500; }
+    .participants { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .participant-chip { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: #F0FDF4; border-radius: 20px; font-size: 13px; }
+    .participant-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+    .action-bar { display: flex; gap: 12px; }
+    .side-card { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #E4E7ED; margin-bottom: 20px; }
+    .publisher-info { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .publisher-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+    .publisher-name { font-size: 16px; font-weight: 600; }
+    @media (max-width: 900px) { .detail-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <a href="home.html" class="logo">🎓 校园轻集市</a>
+        <span class="slogan">轻量、可信、面向校园生活</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li>
+        <li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="3" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <el-breadcrumb separator="/" style="margin-bottom:20px;">
+        <el-breadcrumb-item :to="{ path: 'home.html' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: 'category.html' }">分类浏览</el-breadcrumb-item>
+        <el-breadcrumb-item>拼单搭子</el-breadcrumb-item>
+        <el-breadcrumb-item>拼单详情</el-breadcrumb-item>
+      </el-breadcrumb>
+
+      <div class="detail-layout">
+        <div class="main-card">
+          <div class="detail-header">
+            <h1>{{ item.title }}</h1>
+            <el-tag size="large" :type="statusTagType">{{ item.statusText }}</el-tag>
+          </div>
+          <div class="detail-meta">
+            <span>🕐 发布于 {{ item.time }}</span>
+            <span>👁️ {{ item.views }} 次浏览</span>
+            <span>⏰ 截止 {{ item.deadline }}</span>
+          </div>
+
+          <!-- 进度条 -->
+          <div class="progress-section">
+            <div class="progress-header">
+              <span><strong>拼单进度</strong> — {{ item.progressText }}</span>
+              <span style="font-size:16px;font-weight:700;" :style="{ color: item.current >= item.target ? '#67C23A' : '#409EFF' }">{{ item.current }} / {{ item.target }} 人</span>
+            </div>
+            <el-progress :percentage="progressPct" :color="progressColor" :stroke-width="16" :text-inside="false" />
+            <div v-if="item.current < item.target" style="margin-top:8px;font-size:13px;color:#E6A23C;">
+              ⚡ 还差 {{ item.target - item.current }} 人成团，快来加入！
+            </div>
+            <div v-else style="margin-top:8px;font-size:13px;color:#67C23A;">
+              ✅ 已成团！请联系发起者确认集合时间和地点
+            </div>
+          </div>
+
+          <h3 class="section-title">📋 拼单信息</h3>
+          <div class="info-grid">
+            <div class="info-item" v-for="f in item.fields" :key="f.label">
+              <div class="label">{{ f.label }}</div>
+              <div class="value">{{ f.value }}</div>
+            </div>
+          </div>
+
+          <h3 class="section-title">📝 拼单说明</h3>
+          <p class="desc-text">{{ item.description }}</p>
+
+          <h3 class="section-title">👥 已加入的搭子</h3>
+          <div class="participants">
+            <div class="participant-chip" v-for="p in participants" :key="p.id">
+              <img :src="p.avatar" @error="e => e.target.style.display='none'" />
+              <span>{{ p.name }}</span>
+              <span v-if="p.isCreator" style="font-size:11px;color:#409EFF;">发起者</span>
+            </div>
+            <div v-if="item.current < item.target" class="participant-chip" style="background:#F0F2F5;color:#909399;border:1px dashed #DCDFE6;">
+              +{{ item.target - item.current }} 个空位
+            </div>
+          </div>
+
+          <div class="action-bar">
+            <el-button type="primary" size="large" @click="joined = !joined" :disabled="item.current >= item.target && !joined">
+              {{ joined ? '✅ 已加入' : (item.current >= item.target ? '已满员' : '🤝 加入拼单') }}
+            </el-button>
+            <el-button size="large" @click="favorited = !favorited">
+              <el-icon style="margin-right:6px;"><Star v-if="!favorited" /><StarFilled v-else style="color:#E6A23C;" /></el-icon>{{ favorited ? '已收藏' : '收藏' }}
+            </el-button>
+          </div>
+        </div>
+
+        <aside>
+          <div class="side-card">
+            <h3 class="section-title">👤 发起者</h3>
+            <div class="publisher-info">
+              <img :src="publisher.avatar" class="publisher-avatar" @error="e => e.target.src='https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100'" />
+              <div>
+                <div class="publisher-name">{{ publisher.name }}</div>
+                <div style="font-size:12px;color:#67C23A;">✅ 已认证 · 发起 {{ publisher.initiated }} 次拼单</div>
+              </div>
+            </div>
+            <el-button type="primary" plain style="width:100%;" @click="showContact = true">联系发起者</el-button>
+          </div>
+
+          <div v-if="showContact" class="side-card" style="background:#ECF5FF;border:1px solid #C6E2FF;">
+            <h4 style="margin-bottom:8px;color:#409EFF;">📱 联系方式</h4>
+            <p><strong>微信：</strong>{{ item.contact }}</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          showContact: false, joined: false, favorited: false,
+          item: {
+            title: '奶茶拼单 — 满5杯减15元',
+            statusText: '拼单中', time: '2026-06-27 15:00', views: 189, deadline: '2026-06-29',
+            current: 3, target: 5,
+            progressText: '已有3人加入',
+            fields: [
+              { label: '拼单类型', value: '餐饮拼单' },
+              { label: '集合地点', value: '南门奶茶店' },
+              { label: '人均费用', value: '约 ¥12/人' },
+              { label: '截止日期', value: '2026年6月29日' },
+              { label: '联系方式', value: '微信 milk_tea_pin' },
+              { label: '状态', value: '进行中' },
+            ],
+            description: '南门奶茶店拼单活动！满5杯减15元，目前已有3人。\n\n招牌波波奶茶原价15元/杯，拼单后平均每人省3元。可选口味：原味波波、抹茶波波、黑糖波波、芋泥波波。\n\n计划6月29日下午5点一起去南门奶茶店拿，大家AA付款。加入后我会拉微信群方便沟通。如果人数够了可以提前去拿！',
+            contact: 'milk_tea_pin',
+          },
+          participants: [
+            { id:1, name:'经管学院小红', avatar:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=60', isCreator: true },
+            { id:2, name:'计算机学院小明', avatar:'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60', isCreator: false },
+            { id:3, name:'外语学院小刚', avatar:'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60', isCreator: false },
+          ],
+          publisher: { name:'经管学院小红', avatar:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', initiated: 6 },
+        }
+      },
+      computed: {
+        progressPct() { return Math.round(this.item.current / this.item.target * 100) },
+        progressColor() { return this.item.current >= this.item.target ? '#67C23A' : '#409EFF' },
+        statusTagType() {
+          if (this.item.current >= this.item.target) return 'success'
+          if (this.item.statusText === '即将截止') return 'danger'
+          return 'warning'
+        },
+      }
+    })
+    app.use(ElementPlus)
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component)
+    }
+    app.mount('#app')
+  </script>
+</body>
+</html>

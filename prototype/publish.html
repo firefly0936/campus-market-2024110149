@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布信息 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .page-header { text-align: center; margin-bottom: 36px; }
+    .page-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .page-header p { font-size: 15px; color: #909399; }
+    .category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .cat-card { display: flex; flex-direction: column; align-items: center; padding: 36px 24px; background: #fff; border: 2px solid #E4E7ED; border-radius: 12px; text-decoration: none; transition: all 0.2s; cursor: pointer; }
+    .cat-card:hover { border-color: #409EFF; box-shadow: 0 4px 16px rgba(64,158,255,0.12); transform: translateY(-2px); }
+    .cat-icon { font-size: 52px; margin-bottom: 16px; }
+    .cat-card h3 { font-size: 20px; font-weight: 700; color: #303133; margin-bottom: 8px; }
+    .cat-card p { font-size: 13px; color: #909399; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <a href="home.html" class="logo">🎓 校园轻集市</a>
+        <span class="slogan">轻量、可信、面向校园生活</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li>
+        <li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="3" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish active">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <div class="page-header">
+        <h1>📝 发布信息</h1>
+        <p>选择你要发布的信息类型，填写对应的内容</p>
+      </div>
+
+      <el-steps :active="0" align-center style="margin-bottom:40px;">
+        <el-step title="选择分类" description="确定信息类型" />
+        <el-step title="填写信息" description="完善详细内容" />
+        <el-step title="提交发布" description="审核后展示" />
+      </el-steps>
+
+      <div class="category-grid">
+        <a v-for="cat in categories" :key="cat.key" :href="cat.link" class="cat-card" :style="{ borderTop: '3px solid ' + cat.accent }">
+          <span class="cat-icon">{{ cat.icon }}</span>
+          <h3>{{ cat.name }}</h3>
+          <p>{{ cat.desc }}</p>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          categories: [
+            { key:'item', name:'🛒 二手商品', desc:'出售闲置物品 — 电子产品、教材、生活用品、出行工具等', link:'publish-item.html', accent:'#409EFF' },
+            { key:'lost', name:'🔍 失物招领', desc:'发布失物或招领信息 — 校园卡、钥匙、耳机、眼镜等', link:'publish-lost.html', accent:'#DC2626' },
+            { key:'group', name:'🤝 拼单搭子', desc:'发起拼单活动 — 外卖、奶茶、团购、出行拼车等', link:'publish-group.html', accent:'#16A34A' },
+            { key:'task', name:'🏃 跑腿委托', desc:'发布委托任务 — 代取快递、代买物品、搬运帮忙等', link:'publish-task.html', accent:'#DB2777' },
+          ],
+        }
+      }
+    })
+    app.use(ElementPlus)
+    app.mount('#app')
+  </script>
+</body>
+</html>

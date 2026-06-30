@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>信息审核 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 240px; background: #304156; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-brand { padding: 20px 24px; font-size: 18px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sidebar-menu { flex: 1; padding: 12px 0; }
+    .sidebar-menu a { display: flex; align-items: center; gap: 10px; padding: 14px 24px; color: #BFCDD9; text-decoration: none; font-size: 14px; transition: all 0.2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background: rgba(255,255,255,0.06); color: #fff; }
+    .admin-main { flex: 1; display: flex; flex-direction: column; }
+    .admin-top { height: 56px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+    .admin-content { flex: 1; padding: 24px; }
+    .main-card { background: #fff; border-radius: 10px; border: 1px solid #E4E7ED; padding: 24px; }
+    .toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    @media (max-width: 900px) { .admin-sidebar { width: 64px; } .sidebar-menu a span { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="sidebar-brand">🎓 管理后台</div>
+        <nav class="sidebar-menu">
+          <a href="admin-dashboard.html"><el-icon><DataBoard /></el-icon><span>数据概览</span></a>
+          <a href="admin-review.html" class="active"><el-icon><Checked /></el-icon><span>信息审核</span></a>
+          <a href="category.html"><el-icon><List /></el-icon><span>内容管理</span></a>
+          <a href="home.html"><el-icon><HomeFilled /></el-icon><span>返回前台</span></a>
+        </nav>
+      </aside>
+
+      <div class="admin-main">
+        <header class="admin-top">
+          <span style="font-size:18px;font-weight:600;">✅ 信息审核</span>
+          <el-tag type="success">管理员</el-tag>
+        </header>
+
+        <main class="admin-content">
+          <div class="main-card">
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;">内容审核列表</h3>
+
+            <!-- 工具栏 -->
+            <div class="toolbar">
+              <el-input v-model="search" placeholder="搜索标题…" :prefix-icon="Search" style="width:240px;" size="default" clearable />
+              <el-select v-model="filterCat" placeholder="分类筛选" size="default" clearable style="width:130px;">
+                <el-option label="二手交易" value="二手交易" /><el-option label="失物招领" value="失物招领" />
+                <el-option label="拼单搭子" value="拼单搭子" /><el-option label="跑腿委托" value="跑腿委托" />
+              </el-select>
+              <el-select v-model="filterStatus" placeholder="状态筛选" size="default" clearable style="width:120px;">
+                <el-option label="待审核" value="待审核" /><el-option label="已通过" value="已通过" /><el-option label="已驳回" value="已驳回" />
+              </el-select>
+            </div>
+
+            <!-- 审核表格 -->
+            <el-table :data="filteredItems" style="width:100%;" stripe>
+              <el-table-column prop="id" label="ID" width="60" />
+              <el-table-column prop="title" label="标题" min-width="200">
+                <template #default="scope">
+                  <a :href="scope.row.link" style="color:#409EFF;text-decoration:none;" target="_blank">{{ scope.row.title }}</a>
+                </template>
+              </el-table-column>
+              <el-table-column prop="category" label="分类" width="100">
+                <template #default="scope"><el-tag size="small">{{ scope.row.category }}</el-tag></template>
+              </el-table-column>
+              <el-table-column prop="publisher" label="发布者" width="120" />
+              <el-table-column prop="time" label="提交时间" width="160" />
+              <el-table-column prop="status" label="状态" width="90">
+                <template #default="scope">
+                  <el-tag size="small" :type="scope.row.status === '待审核' ? 'warning' : (scope.row.status === '已通过' ? 'success' : 'danger')">{{ scope.row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="200" fixed="right">
+                <template #default="scope">
+                  <div v-if="scope.row.status === '待审核'" style="display:flex;gap:6px;">
+                    <el-button size="small" type="success" @click="approve(scope.row)">通过</el-button>
+                    <el-button size="small" type="danger" @click="reject(scope.row)">驳回</el-button>
+                    <el-button size="small" @click="viewDetail(scope.row)">查看</el-button>
+                  </div>
+                  <el-button v-else size="small" @click="viewDetail(scope.row)">查看</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <div style="text-align:center;margin-top:20px;">
+              <el-pagination background layout="prev, pager, next" :total="totalItems" :page-size="8" v-model:current-page="currentPage" />
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- 驳回理由弹窗 -->
+    <el-dialog v-model="rejectVisible" title="驳回理由" width="400px">
+      <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请填写驳回理由…" />
+      <template #footer>
+        <el-button @click="rejectVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmReject">确认驳回</el-button>
+      </template>
+    </el-dialog>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          Search: ElementPlusIconsVue.Search, rejectVisible: false, rejectReason: '', pendingReject: null,
+          search: '', filterCat: '', filterStatus: '', currentPage: 1,
+          items: [
+            { id:101, title:'九成新 iPad Air — 考研结束出', category:'二手交易', publisher:'计算机学院小明', time:'2026-06-27 14:30', status:'已通过', link:'item-detail.html' },
+            { id:102, title:'二手山地自行车 — 毕业低价出', category:'二手交易', publisher:'外语学院小刚', time:'2026-06-28 09:15', status:'已通过', link:'item-detail.html' },
+            { id:103, title:'代刷网课服务 — 全科包过（违规）', category:'跑腿委托', publisher:'匿名用户', time:'2026-06-29 08:00', status:'已驳回', link:'#' },
+            { id:104, title:'A4打印纸整箱团购', category:'拼单搭子', publisher:'电信学院小美', time:'2026-06-29 10:20', status:'待审核', link:'group-detail.html' },
+            { id:105, title:'当季樱桃拼单 — 5斤装', category:'拼单搭子', publisher:'外语学院小刚', time:'2026-06-29 11:00', status:'待审核', link:'group-detail.html' },
+            { id:106, title:'帮忙搬行李 — 宿舍到校门口', category:'跑腿委托', publisher:'外语学院小刚', time:'2026-06-29 12:30', status:'待审核', link:'task-detail.html' },
+            { id:107, title:'遗失黑色保温杯 — 教学楼301', category:'失物招领', publisher:'电信学院小美', time:'2026-06-29 13:00', status:'已通过', link:'lost-detail.html' },
+          ],
+        }
+      },
+      computed: {
+        filteredItems() {
+          let list = this.items
+          if (this.search) { const q = this.search.toLowerCase(); list = list.filter(i => i.title.toLowerCase().includes(q) || i.publisher.toLowerCase().includes(q)) }
+          if (this.filterCat) list = list.filter(i => i.category === this.filterCat)
+          if (this.filterStatus) list = list.filter(i => i.status === this.filterStatus)
+          return list
+        },
+        totalItems() { return this.filteredItems.length },
+      },
+      methods: {
+        approve(row) { row.status = '已通过'; this.$message.success('已通过: ' + row.title); },
+        reject(row) { this.pendingReject = row; this.rejectReason = ''; this.rejectVisible = true; },
+        confirmReject() { if (this.pendingReject) { this.pendingReject.status = '已驳回'; this.$message.warning('已驳回: ' + this.pendingReject.title); } this.rejectVisible = false; this.pendingReject = null; },
+        viewDetail(row) { if (row.link && row.link !== '#') { window.open(row.link); } else { this.$message.info('查看详情（演示）'); } },
+      }
+    })
+    app.use(ElementPlus)
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) { app.component(key, component) }
+    app.mount('#app')
+  </script>
+</body>
+</html>

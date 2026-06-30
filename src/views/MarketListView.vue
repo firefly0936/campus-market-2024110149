@@ -140,7 +140,7 @@ const filteredItems = computed(() => {
       <RouterLink
         v-for="item in filteredItems"
         :key="`${item.categoryKey}-${item.id}`"
-        :to="`/detail/${item.id}`"
+        :to="`/detail/${item.categoryKey}/${item.id}`"
         class="item-card"
       >
         <div class="item-header">

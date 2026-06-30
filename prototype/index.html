@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园轻集市 — 原型入口</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .prototype-header { background: linear-gradient(135deg, #409EFF, #337ECC); color: #fff; padding: 48px 24px; text-align: center; }
+    .prototype-header h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .prototype-header p { font-size: 16px; opacity: 0.9; }
+    .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+    .section-title { font-size: 18px; font-weight: 700; color: #303133; margin: 0 0 12px; padding-left: 12px; border-left: 3px solid #409EFF; }
+    .page-card { background: #fff; border: 1px solid #E4E7ED; border-radius: 8px; padding: 20px; transition: all 0.2s; text-decoration: none; display: block; }
+    .page-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-color: #409EFF; transform: translateY(-1px); }
+    .page-card h3 { font-size: 16px; color: #303133; margin-bottom: 4px; }
+    .page-card p { font-size: 13px; color: #909399; }
+    .page-card .route { font-size: 12px; color: #409EFF; margin-top: 8px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="prototype-header">
+      <h1>🎓 校园轻集市</h1>
+      <p>UI 原型入口 — 轻量、可信、面向校园生活</p>
+      <p style="margin-top:12px;font-size:13px;">点击下方链接浏览各页面原型 | 共 {{ pages.length }} 个页面</p>
+    </header>
+
+    <main style="max-width:1200px;margin:0 auto;padding:0 24px 48px;">
+      <!-- 核心业务页面 -->
+      <h2 class="section-title" style="margin-top:32px;margin-bottom:16px;">核心业务页面</h2>
+      <div class="page-grid">
+        <a v-for="p in corePages" :key="p.file" :href="p.file" class="page-card">
+          <h3>{{ p.emoji }} {{ p.name }}</h3>
+          <p>{{ p.desc }}</p>
+          <div class="route">{{ p.file }}</div>
+        </a>
+      </div>
+
+      <!-- 发布页面 -->
+      <h2 class="section-title" style="margin-top:32px;margin-bottom:16px;">发布信息</h2>
+      <div class="page-grid">
+        <a v-for="p in publishPages" :key="p.file" :href="p.file" class="page-card">
+          <h3>{{ p.emoji }} {{ p.name }}</h3>
+          <p>{{ p.desc }}</p>
+          <div class="route">{{ p.file }}</div>
+        </a>
+      </div>
+
+      <!-- 消息与个人中心 -->
+      <h2 class="section-title" style="margin-top:32px;margin-bottom:16px;">消息与个人中心</h2>
+      <div class="page-grid">
+        <a v-for="p in userPages" :key="p.file" :href="p.file" class="page-card">
+          <h3>{{ p.emoji }} {{ p.name }}</h3>
+          <p>{{ p.desc }}</p>
+          <div class="route">{{ p.file }}</div>
+        </a>
+      </div>
+
+      <!-- 账号与管理端 -->
+      <h2 class="section-title" style="margin-top:32px;margin-bottom:16px;">账号与管理端</h2>
+      <div class="page-grid">
+        <a v-for="p in adminPages" :key="p.file" :href="p.file" class="page-card">
+          <h3>{{ p.emoji }} {{ p.name }}</h3>
+          <p>{{ p.desc }}</p>
+          <div class="route">{{ p.file }}</div>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          corePages: [
+            { name: '首页', emoji: '🏠', desc: '四大业务场景入口卡片 + 快捷操作', file: 'home.html' },
+            { name: '分类浏览页', emoji: '📋', desc: '全部分类 Tab 切换浏览 + 搜索筛选', file: 'category.html' },
+            { name: '二手商品详情', emoji: '🛒', desc: '二手物品完整详情 + 联系卖家', file: 'item-detail.html' },
+            { name: '失物招领详情', emoji: '🔍', desc: '失物/招领信息详情 + 认领联系', file: 'lost-detail.html' },
+            { name: '拼单搭子详情', emoji: '🤝', desc: '拼单进度 + 参与者列表 + 加入拼单', file: 'group-detail.html' },
+            { name: '跑腿委托详情', emoji: '🏃', desc: '任务路线 + 报酬 + 接单操作', file: 'task-detail.html' },
+          ],
+          publishPages: [
+            { name: '信息发布选择', emoji: '📝', desc: '选择要发布的信息类型', file: 'publish.html' },
+            { name: '发布二手商品', emoji: '🛒', desc: '商品名称/价格/成色/地点/图片', file: 'publish-item.html' },
+            { name: '发布失物招领', emoji: '🔍', desc: '失物/招领类型/物品/时间/特征', file: 'publish-lost.html' },
+            { name: '发布拼单搭子', emoji: '🤝', desc: '拼单主题/人数/截止时间/集合点', file: 'publish-group.html' },
+            { name: '发布跑腿委托', emoji: '🏃', desc: '任务内容/取送地/报酬/完成时间', file: 'publish-task.html' },
+          ],
+          userPages: [
+            { name: '消息列表', emoji: '📬', desc: '会话列表 + 未读标记 + 搜索', file: 'messages.html' },
+            { name: '聊天详情', emoji: '💬', desc: '聊天记录 + 关联卡片 + 发送', file: 'chat.html' },
+            { name: '个人中心', emoji: '👤', desc: '头像/信息/统计/动态', file: 'profile.html' },
+            { name: '我的发布', emoji: '📦', desc: '已发布信息管理 + 状态筛选', file: 'my-posts.html' },
+            { name: '我的收藏', emoji: '⭐', desc: '收藏列表 + 取消收藏', file: 'favorites.html' },
+            { name: '账号设置', emoji: '⚙️', desc: '修改资料/密码/通知设置', file: 'settings.html' },
+          ],
+          adminPages: [
+            { name: '登录页', emoji: '🔑', desc: '用户登录入口', file: 'login.html' },
+            { name: '注册页', emoji: '📝', desc: '新用户注册', file: 'register.html' },
+            { name: '管理端首页', emoji: '📊', desc: '数据概览 + 统计卡片 + 趋势图', file: 'admin-dashboard.html' },
+            { name: '信息审核页', emoji: '✅', desc: '审核列表 + 通过/驳回 + 分页', file: 'admin-review.html' },
+          ],
+        }
+      },
+      computed: {
+        pages() {
+          return [...this.corePages, ...this.publishPages, ...this.userPages, ...this.adminPages]
+        }
+      }
+    })
+    app.use(ElementPlus)
+    app.mount('#app')
+  </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>发布跑腿委托 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; }
+    .nav-links a:hover { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .main-container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .publish-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+    .form-card { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #E4E7ED; }
+    .form-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .side-card { background: #fff; border-radius: 12px; padding: 24px; border: 1px solid #E4E7ED; position: sticky; top: 84px; }
+    .route-preview { display: flex; align-items: center; gap: 12px; padding: 16px; background: #F5F7FA; border-radius: 8px; margin: 8px 0 16px; }
+    .route-point { flex: 1; text-align: center; font-size: 14px; }
+    .route-arrow { font-size: 20px; color: #909399; }
+    .notice-box { margin-top: 24px; padding: 16px; background: #FDF6EC; border-radius: 8px; font-size: 13px; color: #8A6D3B; }
+    @media (max-width: 768px) { .publish-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand"><a href="home.html" class="logo">🎓 校园轻集市</a><span class="slogan">轻量、可信、面向校园生活</span></div>
+      <ul class="nav-links">
+        <li><a href="home.html">首页</a></li><li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="3" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <el-breadcrumb separator="/" style="margin-bottom:20px;">
+        <el-breadcrumb-item :to="{ path: 'home.html' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: 'publish.html' }">发布信息</el-breadcrumb-item>
+        <el-breadcrumb-item>发布跑腿委托</el-breadcrumb-item>
+      </el-breadcrumb>
+
+      <el-steps :active="1" align-center style="margin-bottom:28px;">
+        <el-step title="选择分类" /><el-step title="填写信息" /><el-step title="提交发布" />
+      </el-steps>
+
+      <div class="publish-layout">
+        <div class="form-card">
+          <h2>🏃 发布跑腿委托</h2>
+          <el-form label-position="top" size="large">
+            <el-form-item label="任务标题" required>
+              <el-input v-model="form.title" placeholder="例如：帮取快递到宿舍楼下" maxlength="50" show-word-limit />
+            </el-form-item>
+
+            <el-form-item label="任务类型">
+              <el-select v-model="form.category" style="width:100%;">
+                <el-option label="代取快递" value="pickup" /><el-option label="代买物品" value="buy" />
+                <el-option label="搬运帮忙" value="move" /><el-option label="代交材料" value="submit" />
+                <el-option label="其他" value="other" />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="报酬 (¥)" required>
+              <el-input-number v-model="form.reward" :min="0" :precision="0" style="width:100%;" />
+              <template #extra><span style="font-size:12px;color:#909399;">输入 0 表示免费帮忙</span></template>
+            </el-form-item>
+
+            <!-- 路线预览 -->
+            <div v-if="form.pickup || form.delivery" class="route-preview">
+              <div class="route-point">
+                <div style="font-size:11px;color:#909399;">📦 取件地</div>
+                <div style="font-weight:600;">{{ form.pickup || '—' }}</div>
+              </div>
+              <div class="route-arrow">→</div>
+              <div class="route-point">
+                <div style="font-size:11px;color:#909399;">📍 送达地</div>
+                <div style="font-weight:600;">{{ form.delivery || '—' }}</div>
+              </div>
+            </div>
+
+            <el-form-item label="取件地点" required>
+              <el-input v-model="form.pickup" placeholder="例如：北门菜鸟驿站" />
+            </el-form-item>
+
+            <el-form-item label="送达地点" required>
+              <el-input v-model="form.delivery" placeholder="例如：西区5栋楼下" />
+            </el-form-item>
+
+            <el-form-item label="期望完成时间" required>
+              <el-date-picker v-model="form.deadline" type="datetime" placeholder="选择日期和时间" style="width:100%;" />
+            </el-form-item>
+
+            <el-form-item label="联系方式" required>
+              <el-input v-model="form.contact" placeholder="微信号 / 手机号" />
+            </el-form-item>
+
+            <el-form-item label="任务描述" required>
+              <el-input v-model="form.description" type="textarea" :rows="4" placeholder="详细描述任务内容：物品大小重量、是否需要垫付、特殊注意事项等…" maxlength="500" show-word-limit />
+            </el-form-item>
+
+            <div class="notice-box">
+              <strong>⚠️ 发布须知</strong>
+              <ul style="margin-top:6px;padding-left:18px;">
+                <li>请合理设置报酬，提高接单率</li>
+                <li>如涉及垫付，请提前说明金额和支付方式</li>
+                <li>接单后双方应保持沟通，确认任务细节</li>
+                <li>贵重或易碎物品建议自己处理</li>
+              </ul>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:24px;">
+              <el-button size="large" style="flex:1;" @click="saveDraft">💾 保存草稿</el-button>
+              <el-button type="primary" size="large" style="flex:1;" @click="submitted = true">发布委托</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <aside>
+          <div class="side-card">
+            <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">💡 填写提示</h3>
+            <ul style="font-size:13px;color:#606266;line-height:2;padding-left:18px;">
+              <li>标题简洁说明任务内容</li>
+              <li>取送地写清楚楼栋和楼层</li>
+              <li>报酬合理更容易被接单（一般5-25元）</li>
+              <li>附上物品重量和大小信息</li>
+              <li>如有时间弹性请说明</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <el-dialog v-model="submitted" title="发布成功" width="420px" center>
+        <div style="text-align:center;padding:20px 0;">
+          <div style="font-size:56px;margin-bottom:12px;">✅</div>
+          <p style="font-size:16px;color:#303133;">跑腿委托已发布</p>
+          <p style="font-size:13px;color:#909399;margin-top:8px;">有人接单后你会收到消息通知</p>
+        </div>
+        <template #footer>
+          <el-button @click="submitted = false">继续发布</el-button>
+          <el-button type="primary" @click="window.location='category.html'">查看集市</el-button>
+        </template>
+      </el-dialog>
+    </main>
+  </div>
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          submitted: false,
+          form: { title:'', category:'', reward:0, pickup:'', delivery:'', deadline:'', contact:'', description:'' },
+        }
+      },
+      methods: { saveDraft() { this.$message.success('草稿已保存'); } }
+    })
+    app.use(ElementPlus); app.mount('#app')
+  </script>
+</body>
+</html>

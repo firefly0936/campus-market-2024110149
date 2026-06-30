@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 — 校园轻集市</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #F5F7FA; color: #303133; }
+
+    /* 顶部导航 */
+    .app-header { height: 60px; background: #fff; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand .logo { font-size: 20px; font-weight: 700; color: #303133; text-decoration: none; }
+    .brand .slogan { font-size: 13px; color: #909399; }
+    .nav-links { display: flex; gap: 24px; align-items: center; list-style: none; }
+    .nav-links a { text-decoration: none; color: #606266; font-size: 14px; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: #409EFF; }
+    .nav-publish { padding: 6px 18px; background: #409EFF; color: #fff !important; border-radius: 8px; font-weight: 600; }
+    .nav-publish:hover { background: #337ECC; }
+
+    /* 主体 */
+    .main-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* 欢迎区 */
+    .welcome { margin-bottom: 32px; }
+    .welcome h1 { font-size: 28px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+    .welcome p { font-size: 15px; color: #6B7280; }
+
+    /* 业务入口卡片 */
+    .sections-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+    .section-card { display: flex; flex-direction: column; padding: 28px 24px; border-radius: 12px; border: 2px solid transparent; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .section-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+    .section-icon { font-size: 44px; margin-bottom: 16px; }
+    .section-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .section-card p { font-size: 13px; line-height: 1.6; }
+    .section-arrow { margin-top: 16px; font-size: 13px; font-weight: 500; align-self: flex-end; }
+
+    /* 快捷操作 */
+    .quick-row { display: flex; gap: 16px; margin-bottom: 40px; }
+    .btn-publish-hero { display: inline-flex; align-items: center; gap: 8px; padding: 14px 36px; background: linear-gradient(135deg, #409EFF, #337ECC); color: #fff; font-size: 16px; font-weight: 600; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(64,158,255,0.35); transition: all 0.2s; }
+    .btn-publish-hero:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-market { display: inline-flex; align-items: center; gap: 6px; padding: 14px 28px; background: #fff; color: #409EFF; font-size: 15px; font-weight: 500; border-radius: 10px; text-decoration: none; border: 1px solid #C6E2FF; transition: all 0.2s; }
+    .btn-market:hover { border-color: #409EFF; background: #ECF5FF; }
+
+    /* 最近发布 */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .section-header h2 { font-size: 20px; font-weight: 700; }
+    .section-header a { font-size: 14px; color: #409EFF; text-decoration: none; }
+    .recent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .item-card { background: #fff; border: 1px solid #E4E7ED; border-radius: 8px; padding: 16px; text-decoration: none; color: inherit; transition: all 0.2s; }
+    .item-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-color: #409EFF; }
+    .item-card .item-type { font-size: 12px; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+    .item-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: #303133; }
+    .item-card .item-desc { font-size: 13px; color: #6B7280; line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .item-card .item-footer { display: flex; justify-content: space-between; align-items: center; }
+    .item-card .item-price { font-size: 18px; font-weight: 700; color: #E6A23C; }
+    .item-card .item-time { font-size: 12px; color: #C0C4CC; }
+
+    /* 底部 */
+    .app-footer { text-align: center; padding: 32px 24px; color: #909399; font-size: 13px; border-top: 1px solid #E4E7ED; margin-top: 48px; }
+
+    @media (max-width: 900px) { .sections-grid { grid-template-columns: repeat(2, 1fr); } .recent-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航 -->
+    <header class="app-header">
+      <div class="brand">
+        <a href="home.html" class="logo">🎓 校园轻集市</a>
+        <span class="slogan">轻量、可信、面向校园生活</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="home.html" class="active">首页</a></li>
+        <li><a href="category.html">分类浏览</a></li>
+        <li><a href="messages.html">消息<el-badge :value="unread" :max="99" style="margin-left:2px;"/></a></li>
+        <li><a href="profile.html">我的</a></li>
+        <li><a href="publish.html" class="nav-publish">✍️ 发布信息</a></li>
+      </ul>
+    </header>
+
+    <main class="main-container">
+      <!-- 欢迎区 -->
+      <section class="welcome">
+        <h1>👋 欢迎来到校园轻集市</h1>
+        <p>一站式校园生活服务平台 — 二手交易、失物招领、拼单搭子、跑腿委托，都在这里。</p>
+      </section>
+
+      <!-- 四大业务入口 -->
+      <div class="sections-grid">
+        <a v-for="s in sections" :key="s.key" :href="s.to" class="section-card" :style="{ background: s.bg, borderColor: s.border }">
+          <span class="section-icon">{{ s.icon }}</span>
+          <h3 :style="{ color: s.titleColor }">{{ s.name }}</h3>
+          <p style="color:#6B7280;">{{ s.desc }}</p>
+          <span class="section-arrow" :style="{ color: s.arrowColor }">进入 {{ s.name }} →</span>
+        </a>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="quick-row">
+        <a href="publish.html" class="btn-publish-hero">✍️ 发布信息</a>
+        <a href="category.html" class="btn-market">📋 浏览集市列表 →</a>
+      </div>
+
+      <!-- 最近发布 -->
+      <div class="section-header">
+        <h2>🕐 最近发布</h2>
+        <a href="category.html">查看全部 →</a>
+      </div>
+      <div class="recent-grid">
+        <a v-for="item in recentItems" :key="item.id" :href="item.link" class="item-card">
+          <span class="item-type" :style="{ background: item.typeBg, color: item.typeColor }">{{ item.type }}</span>
+          <h4>{{ item.title }}</h4>
+          <p class="item-desc">{{ item.desc }}</p>
+          <div class="item-footer">
+            <span class="item-price">{{ item.price }}</span>
+            <span class="item-time">{{ item.time }}</span>
+          </div>
+        </a>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>校园轻集市 © 2026 — 轻量、可信、面向校园生活</p>
+    </footer>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const app = createApp({
+      data() {
+        return {
+          unread: 3,
+          sections: [
+            { key:'trade', name:'二手交易', icon:'🛒', desc:'闲置物品买卖，物尽其用，让旧物找到新主人', to:'category.html', bg:'#F0F9FF', border:'#BAE6FD', titleColor:'#0369A1', arrowColor:'#409EFF' },
+            { key:'lost', name:'失物招领', icon:'🔍', desc:'丢了东西？捡到物品？来这里发布和查找', to:'category.html', bg:'#FEF3C7', border:'#FDE68A', titleColor:'#92400E', arrowColor:'#D97706' },
+            { key:'group', name:'拼单搭子', icon:'🤝', desc:'一起拼更划算，找到你的购物搭子', to:'category.html', bg:'#F0FDF4', border:'#BBF7D0', titleColor:'#166534', arrowColor:'#16A34A' },
+            { key:'errand', name:'跑腿委托', icon:'🏃', desc:'找人帮忙取快递、带饭、排队，省时省力', to:'category.html', bg:'#FDF2F8', border:'#FBCFE8', titleColor:'#831843', arrowColor:'#DB2777' },
+          ],
+          recentItems: [
+            { id:1, type:'二手交易', typeBg:'#EFF6FF', typeColor:'#2563EB', title:'九成新 iPad Air — 考研结束出', desc:'2025 款 iPad Air 11 寸，深空灰，128GB WiFi 版，几乎全新…', price:'¥3,200', time:'2小时前', link:'item-detail.html' },
+            { id:2, type:'失物招领', typeBg:'#FEF2F2', typeColor:'#DC2626', title:'遗失校园卡一张 — 图书馆二楼', desc:'蓝色卡套，贴有猫猫贴纸，卡号后四位 3821…', price:'失物', time:'3小时前', link:'lost-detail.html' },
+            { id:3, type:'拼单搭子', typeBg:'#F0FDF4', typeColor:'#16A34A', title:'奶茶拼单 — 满5杯减15元', desc:'南门奶茶店，目前已有3人，还差2人成团…', price:'¥12/人', time:'5小时前', link:'group-detail.html' },
+            { id:4, type:'跑腿委托', typeBg:'#FDF2F8', typeColor:'#BE185D', title:'帮取快递到宿舍楼下', desc:'北门菜鸟驿站取2个快递，送到西区5栋…', price:'¥5', time:'6小时前', link:'task-detail.html' },
+            { id:5, type:'二手交易', typeBg:'#EFF6FF', typeColor:'#2563EB', title:'考研数学复习全书（李永乐全套）', desc:'2026版三件套，只做了前60页，其余全新…', price:'¥45', time:'8小时前', link:'item-detail.html' },
+            { id:6, type:'拼单搭子', typeBg:'#F0FDF4', typeColor:'#16A34A', title:'当季樱桃拼单 — 5斤装', desc:'山东大樱桃果园直发，6人成团价108元…', price:'¥108', time:'10小时前', link:'group-detail.html' },
+          ],
+        }
+      }
+    })
+    app.use(ElementPlus)
+    app.mount('#app')
+  </script>
+</body>
+</html>

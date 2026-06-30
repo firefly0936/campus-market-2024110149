@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAppStore } from '@/stores/counter'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,7 +50,7 @@ const router = createRouter({
       meta: { title: '集市列表' },
     },
     {
-      path: '/detail/:id',
+      path: '/detail/:type/:id',
       name: 'detail',
       component: () => import('@/views/DetailView.vue'),
       meta: { title: '物品详情' },
@@ -69,6 +70,14 @@ const router = createRouter({
       name: 'message',
       component: () => import('@/views/MessageView.vue'),
       meta: { title: '消息' },
+    },
+    {
+      path: '/messages',
+      redirect: '/message',
+    },
+    {
+      path: '/message-center',
+      redirect: '/message',
     },
 
     // ── 个人中心 ──
@@ -99,6 +108,14 @@ const router = createRouter({
       meta: { title: '趋势看板' },
     },
   ],
+})
+
+// 自动设置默认用户（模拟已登录状态）
+router.beforeEach(() => {
+  const store = useAppStore()
+  if (!store.currentUser) {
+    store.setUser({ id: 1, nickname: '校园用户' })
+  }
 })
 
 // 动态设置页面标题

@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAppStore } from '@/stores/counter'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -110,13 +109,7 @@ const router = createRouter({
   ],
 })
 
-// 自动设置默认用户（模拟已登录状态）
-router.beforeEach(() => {
-  const store = useAppStore()
-  if (!store.currentUser) {
-    store.setUser({ id: 1, nickname: '校园用户' })
-  }
-})
+// 用户状态已在 useUserStore 中默认初始化，无需 beforeEach 设置
 
 // 动态设置页面标题
 const BASE_TITLE = '校园轻集市'

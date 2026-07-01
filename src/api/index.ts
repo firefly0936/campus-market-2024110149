@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // JSON Server backend API base URL
-const API_BASE = 'http://localhost:3000'
+const API_BASE = 'http://localhost:3001'
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -55,6 +55,17 @@ export const userApi = {
   get: (id: number) => api.get(`/users/${id}`),
   create: (data: unknown) => api.post('/users', data),
   update: (id: number, data: unknown) => api.put(`/users/${id}`, data),
+}
+
+// 收藏
+export const favoriteApi = {
+  /** 获取用户收藏列表 */
+  list: (userId: number) => api.get(`/favorites?userId=${userId}`),
+  /** 添加收藏 */
+  add: (data: { userId: number; type: string; itemId: number; title: string }) =>
+    api.post('/favorites', data),
+  /** 取消收藏 */
+  remove: (id: number) => api.delete(`/favorites/${id}`),
 }
 
 export default api

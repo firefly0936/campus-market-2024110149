@@ -9,10 +9,12 @@ import { createLostFound } from '../api/lostFound'
 import { createGroupBuy } from '../api/groupBuy'
 import { createErrand } from '../api/errand'
 import { checkContent, type FilterResult } from '../utils/contentFilter'
+import { useUserStore } from '@/stores/user'
 
 type PublishType = 'trade' | 'lostFound' | 'groupBuy' | 'errand'
 
 const router = useRouter()
+const userStore = useUserStore()
 const publishType = ref<PublishType>('trade')
 const submitting = ref(false)
 
@@ -130,10 +132,13 @@ function validate(): boolean {
 }
 
 function buildPayload() {
+  const userId = userStore.currentUser.id
+  const publisher = userStore.displayName
   const base = {
     title: form.title.trim(),
     description: form.description.trim(),
-    publisherId: 1,
+    publisherId: userId,
+    publisher,
     createdAt: new Date().toISOString(),
   }
   switch (publishType.value) {
@@ -145,7 +150,7 @@ function buildPayload() {
         condition: form.condition,
         tradeLocation: form.location.trim(),
         status: '在售',
-        sellerId: 1,
+        sellerId: userId,
       }
     case 'lostFound':
       return {
@@ -165,7 +170,7 @@ function buildPayload() {
         deadline: form.deadline,
         meetingLocation: form.location.trim(),
         status: '进行中',
-        creatorId: 1,
+        creatorId: userId,
       }
     case 'errand':
       return {

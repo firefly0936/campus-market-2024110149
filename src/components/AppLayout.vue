@@ -1,5 +1,15 @@
 <script setup lang="ts">
+import { watch } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
 import AppHeader from './AppHeader.vue'
+import CartFloat from './CartFloat.vue'
+
+const userStore = useUserStore()
+const cartStore = useCartStore()
+
+// 切换用户后清空购物车
+watch(() => userStore.currentUser.id, () => cartStore.clearCart())
 </script>
 
 <template>
@@ -9,6 +19,8 @@ import AppHeader from './AppHeader.vue'
     <main class="app-main">
       <RouterView />
     </main>
+
+    <CartFloat />
   </div>
 </template>
 

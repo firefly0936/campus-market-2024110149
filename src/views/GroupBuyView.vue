@@ -2,11 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { getGroupBuyList, type GroupBuyItem } from '@/api/groupBuy'
 import EmptyState from '@/components/EmptyState.vue'
+import { useFavoriteStore } from '@/stores/favorite'
+import { useCartStore } from '@/stores/cart'
 
 const items = ref<GroupBuyItem[]>([])
 const searchQuery = ref('')
 const activeTab = ref<'all' | 'active' | 'completed'>('all')
 const loading = ref(false)
+
+const favStore = useFavoriteStore()
+const cartStore = useCartStore()
 
 onMounted(async () => {
   loading.value = true
@@ -82,7 +87,25 @@ function progressPercent(item: GroupBuyItem): number {
     <!-- 列表 -->
     <div v-else class="list">
       <div v-for="item in filteredItems" :key="item.id" class="gb-card">
-        <h3 class="gb-title">{{ item.title }}</h3>
+        <div class="gb-header">
+          <h3 class="gb-title">{{ item.title }}</h3>
+          <div class="gb-actions">
+            <button
+              :class="['fav-mini', { active: favStore.isFavorited('groupBuy', item.id) }]"
+              @click.stop="favStore.toggleFavorite('groupBuy', item.id, item.title)"
+              :title="favStore.isFavorited('groupBuy', item.id) ? '取消收藏' : '添加收藏'"
+            >
+              {{ favStore.isFavorited('groupBuy', item.id) ? '❤️' : '🤍' }}
+            </button>
+            <button
+              :class="['cart-mini', { active: cartStore.isInCart('groupBuy', item.id) }]"
+              @click.stop="cartStore.toggleCart({ type: 'groupBuy', itemId: item.id, title: item.title, location: item.meetingLocation })"
+              :title="cartStore.isInCart('groupBuy', item.id) ? '移出购物车' : '加入购物车'"
+            >
+              {{ cartStore.isInCart('groupBuy', item.id) ? '🛒✓' : '🛒' }}
+            </button>
+          </div>
+        </div>
         <p class="gb-desc">{{ item.description }}</p>
         <div class="progress-wrapper">
           <div class="progress-bar">
@@ -209,9 +232,45 @@ function progressPercent(item: GroupBuyItem): number {
 }
 
 .gb-title {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 16px;
   color: #303133;
+  flex: 1;
+}
+
+.gb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.gb-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.fav-mini,
+.cart-mini {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.fav-mini:hover,
+.cart-mini:hover {
+  transform: scale(1.15);
+}
+.fav-mini.active,
+.cart-mini.active {
+  transform: scale(1.1);
 }
 
 .gb-desc {

@@ -750,3 +750,220 @@ AI 可以准确地说"contact 字段在 db.json 和 Interface 中都有，但表
 3. **正则 vs 关键词的互补性**：关键词检测"意图"（"代考"——这是明确要作弊），正则检测"数据"（手机号——这是敏感信息）。两种机制各司其职，组合使用比单一机制更有效。
 
 **今日核心结论：Day4 让我看到 AI 的一个新角色——不仅是代码生成器，还可以是代码审查者。当人给出"检查已有代码是否符合规范"的指令时，AI 的结构化交叉验证能力比人更细致、更不遗漏。但审查发现的每个问题，最终的"改/不改/何时改"决策仍在人——AI 提供事实，人做出判断。**
+
+---
+
+# AI Collaboration Card — Day5
+
+## 协作记录
+
+### 1. Task 2 — 创建用户状态 Store (user.ts)
+
+**我的指令：** 按 Day5 推荐写法创建 `src/stores/user.ts`，使用 Options API，包含 `state`、`getters`、`actions`。
+
+**AI 自主执行过程：**
+- AI 先读取了已存在的 `counter.ts` 了解项目 Pinia 写法风格（Composition API）
+- 首次创建 user.ts 时使用了 Composition API 风格（`ref` + `computed` + `function`），包含 `avatarInitial`、`displayName`、`fetchUser` 等
+- 我指出需要按推荐写法使用 Options API，AI 重新生成了完整文件
+- 新的 Options API 版本：`state` 返回 `isLoggedIn` + `currentUser`（含 name/college/grade/avatar/bio）、`getters` 提供 `displayName` + `userDescription`、`actions` 提供 `updateProfile`/`login`/`logout`
+- AI 随后自动遍历了全部 7 个引用文件（router、AppHeader、ProfileView、UserCenterView、PublishView），将 `currentUser?.nickname` → `currentUser.name`、`setUser` → `updateProfile`、`avatarInitial` → `name.charAt(0)`、`?.` 可选链移除（因为新 Store 中 currentUser 始终存在）
+
+**AI 独立做出的设计决策：**
+- 将 `isLoggedIn` 从 computed（依赖 `currentUser !== null`）改为 state 字段，使其可以被 `login()`/`logout()` actions 显式控制
+- 移除 `fetchUser()` 异步方法（Day5 使用模拟数据，不接入真实登录）
+- 将原有的 `router.beforeEach` 自动设置默认用户逻辑移除——因为 Store 的 state 默认值已包含用户，无需守卫重复设置
+
+**我的审核：**
+1. **字段命名对齐**：原项目使用 `nickname`，推荐写法使用 `name`。AI 在迁移时全部更新，包括 `displayName` getter 引用的 `state.currentUser.name`
+2. **冗余清理**：AI 主动移除了 `router.beforeEach`（不再需要守卫设置默认用户）和 `AppHeader` 中的重复用户标签（导航已有"我的"入口）
+3. **类型安全**：`updateProfile` 接受 `Partial<CurrentUser>`，允许局部更新
+
+**最终验证：** TypeScript 零错误，Vite build 成功，所有引用文件编译通过。
+
+---
+
+### 2. Task 5/6 — 创建收藏状态 Store (favorite.ts)
+
+**我的指令：** 创建收藏 Store，并在四类业务页面的列表中实现收藏/取消收藏。
+
+**AI 自主执行过程：**
+- 创建 `favorite.ts`（Composition API 风格），包含 `favorites` 列表、`isFavorited`/`addFavorite`/`removeFavorite`/`toggleFavorite`/`getFavoritesByType`/`clearAll`
+- 在 `db.json` 中新增 `favorites` 表（3 条初始数据）
+- 在 `api/index.ts` 中新增 `favoriteApi`（list/add/remove）
+- 在 4 个业务列表视图（TradeView/LostFoundView/GroupBuyView/ErrandView）中为每张卡片添加 🤍/❤️ 收藏按钮
+- 在 DetailView 详情页底部添加收藏按钮
+- 在 ProfileView 和 UserCenterView 中添加"我的收藏" Tab
+
+**AI 独立做出的设计决策：**
+- 收藏按钮放在卡片头部/底部，使用 `@click.stop` 阻止事件冒泡
+- `toggleFavorite` 返回布尔值表示操作后的收藏状态，方便父组件做 UI 反馈
+- 收藏仅在内存中（`ref([])`），刷新丢失——符合 Day5"暂时不持久化"的要求
+
+**我的审核：**
+1. 确认收藏按钮在 4 个列表页 + 详情页均正确渲染
+2. 检查了 `isFavorited` 判断逻辑——使用 `type + itemId` 组合键，避免不同类型 ID 冲突
+3. 个人中心的收藏 Tab 使用 `favStore.favorites` 直接渲染，实时响应
+
+**最终验证：** 点击列表页 🤍 → 变为 ❤️ → 个人中心收藏 Tab 出现该条目 → 点"取消收藏" → 列表页 ❤️ 变回 🤍。
+
+---
+
+### 3. 进阶 — 购物车 Store 与浮动组件
+
+**我的指令：** 添加购物车功能——右下角浮动图标，能存放浏览时想购买的物品。
+
+**AI 自主执行过程：**
+- 创建 `cart.ts` Store（Options API），包含 `items` 列表、`count` getter、`addToCart`/`removeFromCart`/`toggleCart`/`removeBatch`/`clearCart` actions
+- 创建 `CartFloat.vue` 组件：右下角 🛒 浮动按钮（含数量徽章）+ 点击展开抽屉面板（物品列表 + 价格/地点 + 移除按钮 + 清空按钮）
+- 在 `AppLayout.vue` 中注册 CartFloat，全局可见
+- 在 4 个列表视图 + 详情页添加 🛒 按钮
+- 购物车物品点击可跳转详情页（`RouterLink`）
+- 切换用户自动清空购物车（AppLayout 中 watch `currentUser.id`）
+
+**AI 独立做出的设计决策：**
+- 购物车与收藏是两个独立 Store——收藏是"长期关注"，购物车是"临时意向"
+- `CartItem` 接口包含可选的 `price` 和 `location`，适配四类业务的差异化数据
+- 抽屉使用 `<Teleport to="body">` 的替代方案（`position: fixed` + z-index 层级），配合遮罩层
+
+**我的审核：**
+1. 购物车与收藏语义分离合理——不会混淆
+2. 切换用户后 cart 清空逻辑放在 AppLayout，避免了 Store 间循环依赖
+3. 购物车物品可点击跳转——我指出后 AI 将 `<div>` 改为 `<RouterLink>`
+
+**最终验证：** 列表中点 🛒 → 右下角徽章 +1 → 点开抽屉查看 → 点击物品跳转详情 → 切换用户 → 购物车自动清空。
+
+---
+
+### 4. 进阶 — 发布管理与批量操作
+
+**我的指令：** "我的发布"需要编辑管理功能；收藏需要批量管理。
+
+**AI 自主执行过程：**
+
+**发布管理：**
+- 为 `PostRecord` 添加 `source` 字段（secondHand/lostAndFound/groupBuy/errand），实现"知道该调哪个 API"
+- 添加 `markDone()` 函数：根据 source 类型调用对应 API，更新状态为"已售/已解决/已成团/已完成"
+- 添加 `deletePost()` 函数：确认弹窗 → 调用对应 API → 列表实时移除
+- 每条发布记录右侧显示 ✓（标记完成）和 🗑（删除）按钮，已完成的记录隐藏 ✓ 按钮
+- 已完成的物品从列表视图（TradeView/LostFoundView/MarketListView/ErrandView）中自动过滤隐藏
+- 用户切换时重新拉取数据——`watch(() => store.currentUser.id, () => execute())`
+
+**批量管理：**
+- 添加 `batchMode` ref 控制多选模式开关
+- 默认仅显示「☐ 多选」按钮，点击后 checkbox + 全选 + 批量操作栏出现
+- 支持全选/单选、批量取消收藏
+- 点「完成」或切 Tab 自动退出批量模式并清除选择
+
+**我的审核：**
+1. `markDone` 使用 `DONE_STATUS` 映射表，避免 switch-case 冗长
+2. 删除前 `confirm()` 弹窗防止误操作
+3. 批量模式的交互改进：之前 checkbox 一直可见（体验差），我指出后 AI 改为"点击多选后才出现"
+
+**最终验证：** 点 ✓ → 状态变为"已售" → 回到列表页刷新 → 该物品消失。点「多选」→ checkbox 出现 → 勾选 → 批量取消收藏。
+
+---
+
+### 5. 交互打磨
+
+**我的指令（多轮反馈）：**
+- "收藏后再查看应该显示实时状态而非固定'已收藏'"
+- "切换用户应该能快速选择而非循环点击"
+- "点击完成的东西应该在其他列表中消失"
+- "购物车里面的东西应该能够跳转到详情页面"
+- "购物车切换用户后应该清空"
+- "批量管理应该点击多选按钮后才出现 checkbox"
+
+**AI 逐项响应：**
+1. **收藏实时状态**：新增 `allItems` Map 存储全部 API 数据的 type-id → status 映射，收藏渲染时交叉查询。已售的显示"已售"，在售的显示"在售"，数据中找不到的显示"已失效"
+2. **快速切换用户**：将循环按钮替换为下拉菜单，展示 5 个用户的头像首字 + 姓名 + 学院年级 + 当前 ✓ 标记，点击任意用户直接切换
+3. **已完成物品隐藏**：在 TradeView/LostFoundView/ErrandView 的 computed 过滤中排除已完成状态
+4. **购物车跳转**：将 `<div>` 改为 `<RouterLink :to="/detail/...">`，移除按钮加 `@click.prevent.stop`
+5. **切换用户清空购物车**：AppLayout 中 `watch(userStore.currentUser.id, clearCart)`
+6. **批量模式交互**：添加 `batchMode` 开关，默认隐藏 checkbox
+
+**最终验证：** 全部 6 项交互问题已修复，TypeScript + Vite build 通过。
+
+---
+
+### 6. 端口修复
+
+**问题：** 页面出现 Network Error。
+
+**AI 自主执行过程：**
+- 测试 `curl localhost:3000` 无响应
+- 测试 `curl localhost:3001` 返回 200
+- 发现项目 API 配置使用 3000，但 JSON Server 实际运行在 3001
+- 将 `src/api/index.ts` 和 `src/api/http.ts` 的 `API_BASE` 从 3000 改为 3001
+
+**最终验证：** 刷新页面，所有 API 请求恢复正常。
+
+---
+
+## Day5 协作总结
+
+| 项目 | 数量 |
+|------|------|
+| 我的顶层指令 | ~15 条（含多轮交互打磨） |
+| AI 创建的新 Store | 3 个（user / favorite / cart） |
+| AI 创建的新组件 | 1 个（CartFloat） |
+| AI 修改的已有文件 | ~15 个（views / router / api / db.json / AppHeader / AppLayout） |
+| AI 主动发现的端口问题 | 1 个（3000 → 3001） |
+| 我的交互反馈驱动改进 | 6 次（实时状态、快速切换、列表过滤、购物车跳转、清空、批量交互） |
+| 我需要修改的 AI 产出 | 主要为交互/UX 调整 |
+| 自动化验证通过 | 2/2 |
+
+**核心经验：**
+
+Day5 的协作模式是"AI 搭建骨架 → 人体验交互 → 反馈驱动打磨"。与 Day4"审查已有代码"不同，Day5 是"从零设计 3 个 Store + 全局组件"，AI 的架构能力（Store 划分、数据流设计）得到了充分体现。但我提出的 6 个交互反馈也暴露了 AI 的盲区：
+
+1. **AI 不会主动考虑"实时状态"**：收藏渲染时 AI 默认显示固定"已收藏"文本，不会想到应该交叉查询 API 数据获取真实状态
+2. **AI 不会主动优化交互细节**：批量管理的 checkbox 默认一直显示（UX 粗糙），需要人体验后指出
+3. **AI 不会主动建立数据间关联**：标记完成后应从列表消失——这是业务逻辑关联，AI 需要明确指令
+
+**"人体验 → 反馈 → AI 修复"的循环是 Day5 最有效的协作模式。**
+
+---
+
+## 实验思考：Pinia Store 设计中的"人机判断"
+
+### 状态设计
+
+| Store | 管理内容 | 是否建议放入 Store | 原因 |
+|-------|---------|------------------|------|
+| user.ts | 当前用户信息 | ✅ 建议 | 多个页面使用（Header/Profile/Publish/UserCenter） |
+| favorite.ts | 收藏列表 | ✅ 建议 | 列表页 + 个人中心都需要 |
+| cart.ts | 购物车 | ✅ 建议 | 跨页面（列表→详情→浮动组件）共享 |
+| PublishView form | 表单输入 | ❌ 不放 | 仅属于发布页面 |
+| TradeView items | 二手列表 | ❌ 不放 | 仅 TradeView 使用，留在组件内 |
+
+### AI 生成内容与人工调整
+
+**AI 帮助生成：**
+- 3 个 Pinia Store 的完整代码（user + favorite + cart）
+- AppHeader/ProfileView/UserCenterView/PublishView 的 Store 集成
+- 4 个列表页 + 详情页的收藏和购物车按钮
+- CartFloat 浮动组件（浮动按钮 + 抽屉 + 动画）
+- 发布管理的 markDone/deletePost 函数
+- 批量管理的 checkbox + 全选 + 批量操作逻辑
+- 用户切换下拉菜单
+
+**人工调整：**
+- user.ts 从 Composition API 重写为 Options API（对齐推荐写法）
+- userStore API 变更后的全局引用更新（nickname→name, setUser→updateProfile）
+- 移除 AppHeader 冗余用户标签（导航已有"我的"）
+- 移除 router.beforeEach 冗余逻辑（Store 已有默认值）
+- 批量管理交互改进（添加多选开关，默认隐藏 checkbox）
+- 收藏显示实时状态（交叉查询 allItems）
+- 切换用户清空购物车逻辑位置选择（AppLayout vs Store 内部）
+- 购物车跳转详情页
+- 已完成物品从列表过滤
+
+### 状态边界判断
+
+**没有放入 Store 的数据：**
+- `PublishView` 的 form/errors 对象 → 仅属于发布页面，使用组件内 reactive
+- `TradeView` 等列表页的 items/searchQuery/sortBy → 仅当前页面使用
+- `ViolationDialog` 的 visible/result → 仅属于发布流程
+- `ProfileView` 的 activeTab → 仅影响当前页面的 tab 切换
+
+**为什么？** Store 不是用来存放所有数据的——只有跨页面/跨组件共享的状态才值得放入 Pinia。

@@ -2,11 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { getLostFoundList, type LostFoundItem } from '@/api/lostFound'
 import EmptyState from '@/components/EmptyState.vue'
+import { useFavoriteStore } from '@/stores/favorite'
+import { useCartStore } from '@/stores/cart'
 
 const items = ref<LostFoundItem[]>([])
 const searchQuery = ref('')
 const activeTab = ref<'all' | 'lost' | 'found'>('all')
 const loading = ref(false)
+
+const favStore = useFavoriteStore()
+const cartStore = useCartStore()
 
 onMounted(async () => {
   loading.value = true
@@ -19,7 +24,7 @@ onMounted(async () => {
 })
 
 const filteredItems = computed(() => {
-  let result = items.value
+  let result = items.value.filter(item => item.status !== '已解决')
   if (activeTab.value === 'lost')
     result = result.filter(item => item.type === '失物')
   if (activeTab.value === 'found')
@@ -89,6 +94,22 @@ const filteredItems = computed(() => {
           <span :class="['status-badge', item.status !== '未解决' ? 'resolved' : '']">
             {{ item.status }}
           </span>
+          <div class="header-actions">
+            <button
+              :class="['fav-mini', { active: favStore.isFavorited('lostAndFound', item.id) }]"
+              @click.stop="favStore.toggleFavorite('lostAndFound', item.id, item.title)"
+              :title="favStore.isFavorited('lostAndFound', item.id) ? '取消收藏' : '添加收藏'"
+            >
+              {{ favStore.isFavorited('lostAndFound', item.id) ? '❤️' : '🤍' }}
+            </button>
+            <button
+              :class="['cart-mini', { active: cartStore.isInCart('lostAndFound', item.id) }]"
+              @click.stop="cartStore.toggleCart({ type: 'lostAndFound', itemId: item.id, title: item.title, location: item.location })"
+              :title="cartStore.isInCart('lostAndFound', item.id) ? '移出购物车' : '加入购物车'"
+            >
+              {{ cartStore.isInCart('lostAndFound', item.id) ? '🛒✓' : '🛒' }}
+            </button>
+          </div>
         </div>
         <h3 class="lf-title">{{ item.title }}</h3>
         <p class="lf-desc">{{ item.description }}</p>
@@ -208,7 +229,34 @@ const filteredItems = computed(() => {
 .lf-header {
   display: flex;
   gap: 8px;
+  align-items: center;
   margin-bottom: 8px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.fav-mini,
+.cart-mini {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: transform 0.2s;
+}
+.fav-mini:hover,
+.cart-mini:hover {
+  transform: scale(1.15);
+}
+.fav-mini.active,
+.cart-mini.active {
+  transform: scale(1.1);
 }
 
 .type-badge {

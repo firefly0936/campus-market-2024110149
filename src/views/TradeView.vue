@@ -2,11 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { getSecondHandList, type SecondHandItem } from '@/api/secondHand'
 import EmptyState from '@/components/EmptyState.vue'
+import { useFavoriteStore } from '@/stores/favorite'
+import { useCartStore } from '@/stores/cart'
 
 const items = ref<SecondHandItem[]>([])
 const searchQuery = ref('')
 const sortBy = ref<'newest' | 'price-asc' | 'price-desc'>('newest')
 const loading = ref(false)
+
+const favStore = useFavoriteStore()
+const cartStore = useCartStore()
 
 onMounted(async () => {
   loading.value = true
@@ -20,6 +25,8 @@ onMounted(async () => {
 
 const filteredItems = computed(() => {
   let result = items.value
+  // 隐藏已完成的
+  result = result.filter(item => item.status !== '已售')
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
     result = result.filter(
@@ -76,6 +83,22 @@ const filteredItems = computed(() => {
         </div>
         <p class="card-desc">{{ item.description }}</p>
         <div class="card-price">
+          <div class="card-actions">
+            <button
+              :class="['fav-mini', { active: favStore.isFavorited('secondHand', item.id) }]"
+              @click.stop="favStore.toggleFavorite('secondHand', item.id, item.title)"
+              :title="favStore.isFavorited('secondHand', item.id) ? '取消收藏' : '添加收藏'"
+            >
+              {{ favStore.isFavorited('secondHand', item.id) ? '❤️' : '🤍' }}
+            </button>
+            <button
+              :class="['cart-mini', { active: cartStore.isInCart('secondHand', item.id) }]"
+              @click.stop="cartStore.toggleCart({ type: 'secondHand', itemId: item.id, title: item.title, price: item.price, location: item.tradeLocation })"
+              :title="cartStore.isInCart('secondHand', item.id) ? '移出购物车' : '加入购物车'"
+            >
+              {{ cartStore.isInCart('secondHand', item.id) ? '🛒✓' : '🛒' }}
+            </button>
+          </div>
           <span v-if="item.price === 0" class="price free">免费</span>
           <span v-else class="price">¥{{ item.price }}</span>
         </div>
@@ -225,7 +248,49 @@ const filteredItems = computed(() => {
 
 .card-price {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.fav-mini,
+.cart-mini {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: transform 0.2s;
+}
+.fav-mini:hover,
+.cart-mini:hover {
+  transform: scale(1.15);
+}
+.fav-mini.active,
+.cart-mini.active {
+  transform: scale(1.1);
+}
+
+.fav-mini {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: transform 0.2s;
+}
+.fav-mini:hover {
+  transform: scale(1.15);
+}
+.fav-mini.active {
+  transform: scale(1.1);
 }
 
 .price {

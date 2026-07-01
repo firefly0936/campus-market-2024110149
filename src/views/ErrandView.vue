@@ -2,11 +2,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { getErrandList, type ErrandItem } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import { useFavoriteStore } from '@/stores/favorite'
+import { useCartStore } from '@/stores/cart'
 
 const items = ref<ErrandItem[]>([])
 const searchQuery = ref('')
 const activeTab = ref<'all' | 'pending' | 'taken'>('all')
 const loading = ref(false)
+
+const favStore = useFavoriteStore()
+const cartStore = useCartStore()
 
 onMounted(async () => {
   loading.value = true
@@ -19,7 +24,7 @@ onMounted(async () => {
 })
 
 const filteredItems = computed(() => {
-  let result = items.value
+  let result = items.value.filter(item => item.status !== '已完成')
   if (activeTab.value === 'pending')
     result = result.filter(i => i.status === '待接单')
   if (activeTab.value === 'taken')
@@ -85,6 +90,22 @@ const filteredItems = computed(() => {
       <div v-for="item in filteredItems" :key="item.id" class="errand-card">
         <div class="errand-header">
           <h3 class="errand-title">{{ item.title }}</h3>
+          <div class="errand-actions">
+            <button
+              :class="['fav-mini', { active: favStore.isFavorited('errand', item.id) }]"
+              @click.stop="favStore.toggleFavorite('errand', item.id, item.title)"
+              :title="favStore.isFavorited('errand', item.id) ? '取消收藏' : '添加收藏'"
+            >
+              {{ favStore.isFavorited('errand', item.id) ? '❤️' : '🤍' }}
+            </button>
+            <button
+              :class="['cart-mini', { active: cartStore.isInCart('errand', item.id) }]"
+              @click.stop="cartStore.toggleCart({ type: 'errand', itemId: item.id, title: item.title, price: item.reward, location: item.pickupLocation })"
+              :title="cartStore.isInCart('errand', item.id) ? '移出购物车' : '加入购物车'"
+            >
+              {{ cartStore.isInCart('errand', item.id) ? '🛒✓' : '🛒' }}
+            </button>
+          </div>
           <span :class="['status-tag', item.status === '待接单' ? 'pending' : 'taken']">
             {{ item.status }}
           </span>
@@ -230,6 +251,32 @@ const filteredItems = computed(() => {
   border-radius: 4px;
   white-space: nowrap;
   font-weight: 600;
+}
+
+.errand-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.fav-mini,
+.cart-mini {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.fav-mini:hover,
+.cart-mini:hover {
+  transform: scale(1.15);
+}
+.fav-mini.active,
+.cart-mini.active {
+  transform: scale(1.1);
 }
 
 .status-tag.pending {

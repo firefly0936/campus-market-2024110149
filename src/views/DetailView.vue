@@ -8,6 +8,8 @@ import { getGroupBuyDetail, type GroupBuyItem } from '@/api/groupBuy'
 import { getErrandDetail, type ErrandItem } from '@/api/errand'
 import ItemCard from '@/components/ItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import { useFavoriteStore, type FavoriteType } from '@/stores/favorite'
+import { useCartStore } from '@/stores/cart'
 
 type DetailItem = SecondHandItem | LostFoundItem | GroupBuyItem | ErrandItem
 
@@ -88,6 +90,30 @@ const contactInfo = computed(() => {
   const i = item.value as Record<string, unknown>
   return String(i.contact || '暂无联系方式')
 })
+
+// 收藏功能
+const favStore = useFavoriteStore()
+const isFavorited = computed(() => favStore.isFavorited(type as FavoriteType, id))
+const itemTitle = computed(() => (item.value as Record<string, unknown>)?.title as string || '')
+
+function toggleFav() {
+  favStore.toggleFavorite(type as FavoriteType, id, itemTitle.value)
+}
+
+// 购物车功能
+const cartStore = useCartStore()
+const isInCart = computed(() => cartStore.isInCart(type as any, id))
+
+function toggleCart() {
+  const i = item.value as Record<string, unknown>
+  cartStore.toggleCart({
+    type: type as any,
+    itemId: id,
+    title: itemTitle.value,
+    price: (i.price ?? i.reward) as number | undefined,
+    location: (i.tradeLocation ?? i.location ?? i.pickupLocation) as string | undefined,
+  })
+}
 
 function goBack() {
   const target = listLink[type] || '/market'
@@ -170,11 +196,23 @@ function goBack() {
           </div>
         </template>
 
-        <!-- 联系方式 + 操作 -->
+        <!-- 联系方式 + 收藏 + 操作 -->
         <template #footer>
           <div class="footer-row">
             <button class="contact-btn" @click="showContact = !showContact">
               {{ showContact ? '隐藏联系方式' : '📱 查看联系方式' }}
+            </button>
+            <button
+              :class="['fav-btn', { favorited: isFavorited }]"
+              @click="toggleFav"
+            >
+              {{ isFavorited ? '❤️ 已收藏' : '🤍 收藏' }}
+            </button>
+            <button
+              :class="['cart-btn', { inCart: isInCart }]"
+              @click="toggleCart"
+            >
+              {{ isInCart ? '🛒 已在购物车' : '🛒 加入购物车' }}
             </button>
             <button class="back-btn" @click="goBack">← 返回列表</button>
           </div>
@@ -312,6 +350,44 @@ function goBack() {
 }
 .contact-btn:hover {
   background: #337ecc;
+}
+.fav-btn {
+  padding: 10px 24px;
+  background: #fff;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fav-btn:hover {
+  border-color: #f56c6c;
+  color: #f56c6c;
+}
+.fav-btn.favorited {
+  border-color: #f56c6c;
+  color: #f56c6c;
+  background: #fef0f0;
+}
+.cart-btn {
+  padding: 10px 24px;
+  background: #fff;
+  color: #606266;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cart-btn:hover {
+  border-color: #e6a23c;
+  color: #e6a23c;
+}
+.cart-btn.inCart {
+  border-color: #e6a23c;
+  color: #e6a23c;
+  background: #fef7f0;
 }
 .back-btn {
   padding: 10px 24px;

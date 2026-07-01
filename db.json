@@ -33,60 +33,20 @@
   ],
   "secondHand": [
     {
-      "id": 1,
-      "title": "九成新 iPad Air — 考研结束出",
-      "description": "2025 款 iPad Air 11 寸，深空灰，128GB WiFi 版，几乎全新，带保护壳和充电器。考研期间买来看网课，现已上岸，闲置出售。",
-      "price": 3200,
-      "images": [],
-      "category": "电子产品",
-      "condition": "九成新",
-      "tradeLocation": "图书馆一楼",
-      "contact": "微信：xiaoyuan123",
-      "status": "在售",
-      "sellerId": 2,
-      "createdAt": "2026-06-27"
+      "status": "已售",
+      "id": 1
     },
     {
-      "id": 2,
-      "title": "考研数学复习全书（李永乐全套）",
-      "description": "2026 版考研数学复习全书三件套，包括复习全书、基础过关660题、历年真题。全书只做了前 60 页，其余全新。",
-      "price": 45,
-      "images": [],
-      "category": "教材教辅",
-      "condition": "七成新",
-      "tradeLocation": "东区食堂门口",
-      "contact": "QQ：2345678901",
-      "status": "在售",
-      "sellerId": 2,
-      "createdAt": "2026-06-28"
+      "status": "已售",
+      "id": 2
     },
     {
-      "id": 3,
-      "title": "二手山地自行车 — 毕业低价出",
-      "description": "美利达公爵 600，26 寸，17 寸车架，购于 2024 年 9 月。日常通勤使用，车况良好，前后变速正常，送车锁。",
-      "price": 680,
-      "images": [],
-      "category": "出行工具",
-      "condition": "七成新",
-      "tradeLocation": "西区 3 栋车棚",
-      "contact": "微信：bike_seller",
-      "status": "在售",
-      "sellerId": 4,
-      "createdAt": "2026-06-28"
+      "status": "已售",
+      "id": 3
     },
     {
-      "id": 4,
-      "title": "IKBC 机械键盘 C87 — 红轴",
-      "description": "ikbc C87 樱桃红轴机械键盘，用了不到半年，键帽无打油，包装盒还在。因为换了无线键盘所以出。",
-      "price": 120,
-      "images": [],
-      "category": "电子产品",
-      "condition": "八成新",
-      "tradeLocation": "实验楼 201",
-      "contact": "微信：kb_owner",
-      "status": "在售",
-      "sellerId": 2,
-      "createdAt": "2026-06-29"
+      "status": "已售",
+      "id": 4
     },
     {
       "id": 5,
@@ -393,13 +353,79 @@
   "messages": [
     {
       "id": 1,
-      "fromId": 1,
+      "fromId": 0,
       "toId": 1,
-      "content": "消息示例",
+      "content": "欢迎使用校园轻集市！你可以在这里发布二手商品、失物招领、拼单搭子和跑腿委托。",
+      "relatedType": "system",
+      "relatedId": 0,
+      "read": true,
+      "createdAt": "2026-06-27"
+    },
+    {
+      "id": 2,
+      "fromId": 0,
+      "toId": 1,
+      "content": "功能提示：收藏的信息可以在个人中心中查看，点击每条消息即可标记为已读。",
+      "relatedType": "system",
+      "relatedId": 0,
+      "read": true,
+      "createdAt": "2026-06-28"
+    },
+    {
+      "id": 3,
+      "fromId": 3,
+      "toId": 1,
+      "content": "你好，我对你发布的 iPad 很感兴趣，能当面看看吗？",
       "relatedType": "secondHand",
       "relatedId": 1,
       "read": true,
-      "createdAt": "2026-06-27"
+      "createdAt": "2026-06-29"
+    },
+    {
+      "id": 4,
+      "fromId": 2,
+      "toId": 1,
+      "content": "拼单还差 1 人就成团了，你要一起吗？",
+      "relatedType": "groupBuy",
+      "relatedId": 3,
+      "read": true,
+      "createdAt": "2026-06-29"
+    },
+    {
+      "id": 5,
+      "fromId": 4,
+      "toId": 1,
+      "content": "钥匙已经归还给失主了，谢谢平台！",
+      "relatedType": "lostAndFound",
+      "relatedId": 2,
+      "read": true,
+      "createdAt": "2026-06-30"
+    }
+  ],
+  "favorites": [
+    {
+      "id": 1,
+      "userId": 1,
+      "type": "secondHand",
+      "itemId": 1,
+      "title": "九成新 iPad Air — 考研结束出",
+      "addedAt": "2026-06-28"
+    },
+    {
+      "id": 2,
+      "userId": 1,
+      "type": "groupBuy",
+      "itemId": 3,
+      "title": "A4 打印纸整箱团购",
+      "addedAt": "2026-06-29"
+    },
+    {
+      "id": 3,
+      "userId": 1,
+      "type": "lostAndFound",
+      "itemId": 2,
+      "title": "捡到一串钥匙 — 图书馆门口",
+      "addedAt": "2026-06-29"
     }
   ]
 }

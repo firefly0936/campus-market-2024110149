@@ -38,41 +38,37 @@ onMounted(async () => {
       getErrandList(),
     ])
 
-    const secondHandItems: MarketItem[] = secondHandRes.data.map((item: SecondHandItem) => ({
-      id: item.id,
-      title: item.title,
-      category: '二手交易',
-      categoryKey: 'secondHand',
-      price: item.price,
-      extra: item.condition,
-    }))
+    const secondHandItems: MarketItem[] = secondHandRes.data
+      .filter((item: SecondHandItem) => item.status !== '已售')
+      .map((item: SecondHandItem) => ({
+        id: item.id, title: item.title,
+        category: '二手交易', categoryKey: 'secondHand',
+        price: item.price, extra: item.condition,
+      }))
 
-    const lostFoundItems: MarketItem[] = lostFoundRes.data.map((item: LostFoundItem) => ({
-      id: item.id,
-      title: item.title,
-      category: '失物招领',
-      categoryKey: 'lostAndFound',
-      price: 0,
-      extra: item.type,
-    }))
+    const lostFoundItems: MarketItem[] = lostFoundRes.data
+      .filter((item: LostFoundItem) => item.status !== '已解决')
+      .map((item: LostFoundItem) => ({
+        id: item.id, title: item.title,
+        category: '失物招领', categoryKey: 'lostAndFound',
+        price: 0, extra: item.type,
+      }))
 
-    const groupBuyItems: MarketItem[] = groupBuyRes.data.map((item: GroupBuyItem) => ({
-      id: item.id,
-      title: item.title,
-      category: '拼单搭子',
-      categoryKey: 'groupBuy',
-      price: 0,
-      extra: `${item.currentCount}/${item.targetCount}人`,
-    }))
+    const groupBuyItems: MarketItem[] = groupBuyRes.data
+      .filter((item: GroupBuyItem) => item.status !== '已成团')
+      .map((item: GroupBuyItem) => ({
+        id: item.id, title: item.title,
+        category: '拼单搭子', categoryKey: 'groupBuy',
+        price: 0, extra: `${item.currentCount}/${item.targetCount}人`,
+      }))
 
-    const errandItems: MarketItem[] = errandRes.data.map((item: ErrandItem) => ({
-      id: item.id,
-      title: item.title,
-      category: '跑腿委托',
-      categoryKey: 'errand',
-      price: item.reward,
-      extra: item.status,
-    }))
+    const errandItems: MarketItem[] = errandRes.data
+      .filter((item: ErrandItem) => item.status !== '已完成')
+      .map((item: ErrandItem) => ({
+        id: item.id, title: item.title,
+        category: '跑腿委托', categoryKey: 'errand',
+        price: item.reward, extra: item.status,
+      }))
 
     items.value = [...secondHandItems, ...lostFoundItems, ...groupBuyItems, ...errandItems]
   } finally {

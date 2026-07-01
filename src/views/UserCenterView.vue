@@ -1,102 +1,368 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useFavoriteStore } from '@/stores/favorite'
+import { useAsync } from '@/composables/useAsync'
+import { getSecondHandList, type SecondHandItem, updateSecondHand, deleteSecondHand } from '@/api/secondHand'
+import { getLostFoundList, type LostFoundItem, updateLostFound, deleteLostFound } from '@/api/lostFound'
+import { getGroupBuyList, type GroupBuyItem, updateGroupBuy, deleteGroupBuy } from '@/api/groupBuy'
+import { getErrandList, type ErrandItem, updateErrand, deleteErrand } from '@/api/errand'
+import EmptyState from '@/components/EmptyState.vue'
 
-const user = ref({
-  name: '张三',
-  avatar: '',
-  studentId: '2024001',
-  phone: '138****8888',
-  wechat: 'zhangsan_wx',
-})
+// ── 两个状态来源 ──
+const userStore = useUserStore()
+const favStore = useFavoriteStore()
 
-const activeTab = ref<'published' | 'joined'>('published')
+// ── 批量管理 ──
+const batchMode = ref(false)
+const selectedFavs = reactive<Set<string>>(new Set())
 
-interface PublishedItem {
+function favKey(type: string, itemId: number) {
+  return `${type}-${itemId}`
+}
+
+function toggleSelect(type: string, itemId: number) {
+  const key = favKey(type, itemId)
+  if (selectedFavs.has(key)) {
+    selectedFavs.delete(key)
+  } else {
+    selectedFavs.add(key)
+  }
+}
+
+function toggleSelectAll() {
+  if (selectedFavs.size === favStore.favorites.length) {
+    selectedFavs.clear()
+  } else {
+    favStore.favorites.forEach((f) => selectedFavs.add(favKey(f.type, f.itemId)))
+  }
+}
+
+function batchRemove() {
+  const ids = Array.from(selectedFavs).map((key) => {
+    const [type, itemId] = key.split('-')
+    return { type: type as any, itemId: Number(itemId) }
+  })
+  ids.forEach(({ type, itemId }) => favStore.removeFavorite(type, itemId))
+  selectedFavs.clear()
+  batchMode.value = false
+}
+
+function exitBatch() {
+  batchMode.value = false
+  selectedFavs.clear()
+}
+
+const isAllSelected = computed(
+  () => favStore.favorites.length > 0 && selectedFavs.size === favStore.favorites.length
+)
+
+const activeTab = ref<'published' | 'favorites'>('published')
+
+type PostSource = 'secondHand' | 'lostAndFound' | 'groupBuy' | 'errand'
+
+interface PostRecord {
   id: number
   title: string
   category: string
   date: string
   status: string
+  source: PostSource
 }
 
-const publishedItems: PublishedItem[] = [
-  { id: 1, title: '二手自行车 — 9成新', category: '二手交易', date: '2026-06-25', status: '在售' },
-  { id: 2, title: '奶茶拼单 — 满减差2人', category: '拼单搭子', date: '2026-06-26', status: '进行中' },
-  { id: 3, title: '代取快递 — 北门驿站', category: '跑腿委托', date: '2026-06-27', status: '已接单' },
-]
+const publishedItems = ref<PostRecord[]>([])
+const allItems = ref<Map<string, string>>(new Map())
 
-const joinedItems: PublishedItem[] = [
-  { id: 101, title: '水果拼单 — 当季樱桃5斤装', category: '拼单搭子', date: '2026-06-27', status: '已加入' },
-  { id: 102, title: '找室友拼网费 — 半年', category: '拼单搭子', date: '2026-06-26', status: '已加入' },
+const { loading, error, execute } = useAsync(async () => {
+  const userId = userStore.currentUser.id
+
+  const [sh, lf, gb, er] = await Promise.all([
+    getSecondHandList(),
+    getLostFoundList(),
+    getGroupBuyList(),
+    getErrandList(),
+  ])
+
+  // 全部数据状态索引
+  allItems.value.clear()
+  sh.data.forEach((i: SecondHandItem) => allItems.value.set(`secondHand-${i.id}`, i.status))
+  lf.data.forEach((i: LostFoundItem) => allItems.value.set(`lostAndFound-${i.id}`, i.status))
+  gb.data.forEach((i: GroupBuyItem) => allItems.value.set(`groupBuy-${i.id}`, i.status))
+  er.data.forEach((i: ErrandItem) => allItems.value.set(`errand-${i.id}`, i.status))
+
+  // 我的发布：四类数据按 userId 筛选后聚合
+  publishedItems.value = [
+    ...sh.data
+      .filter((i: SecondHandItem) => i.sellerId === userId)
+      .map((i: SecondHandItem) => ({
+        id: i.id, title: i.title,
+        category: '二手交易', date: i.createdAt, status: i.status,
+        source: 'secondHand' as PostSource,
+      })),
+    ...lf.data
+      .filter((i: LostFoundItem) => i.publisherId === userId)
+      .map((i: LostFoundItem) => ({
+        id: i.id, title: i.title,
+        category: '失物招领', date: i.createdAt, status: i.status,
+        source: 'lostAndFound' as PostSource,
+      })),
+    ...gb.data
+      .filter((i: GroupBuyItem) => i.creatorId === userId)
+      .map((i: GroupBuyItem) => ({
+        id: i.id, title: i.title,
+        category: '拼单搭子', date: i.createdAt, status: i.status,
+        source: 'groupBuy' as PostSource,
+      })),
+    ...er.data
+      .filter((i: ErrandItem) => i.publisherId === userId)
+      .map((i: ErrandItem) => ({
+        id: i.id, title: i.title,
+        category: '跑腿委托', date: i.createdAt, status: i.status,
+        source: 'errand' as PostSource,
+      })),
+  ]
+})
+
+onMounted(() => execute())
+
+const route = useRoute()
+watch(() => route.path, () => { if (route.path === '/user' || route.path === '/user-center') execute() })
+// 切换用户后立即刷新
+watch(() => userStore.currentUser.id, () => execute())
+
+const completedCount = computed(() =>
+  publishedItems.value.filter((i) =>
+    ['已售', '已解决', '已完成', '已成团'].includes(i.status)
+  ).length
+)
+
+// ── 用户切换（下拉） ──
+const MOCK_USERS = [
+  { id: 1, name: '校园用户', college: '计算机学院', grade: '2023 级' },
+  { id: 2, name: '计算机学院小明', college: '计算机学院', grade: '2022 级' },
+  { id: 3, name: '经管学院小红', college: '经管学院', grade: '2023 级' },
+  { id: 4, name: '外语学院小刚', college: '外语学院', grade: '2024 级' },
+  { id: 5, name: '电信学院小美', college: '电信学院', grade: '2023 级' },
 ]
+const showUserMenu = ref(false)
+
+function switchTo(user: typeof MOCK_USERS[number]) {
+  userStore.updateProfile(user)
+  showUserMenu.value = false
+}
+
+// ── 发布管理 ──
+const DONE_STATUS: Record<PostSource, string> = {
+  secondHand: '已售',
+  lostAndFound: '已解决',
+  groupBuy: '已成团',
+  errand: '已完成',
+}
+
+async function deletePost(item: PostRecord) {
+  if (!confirm(`确定要删除「${item.title}」吗？`)) return
+  try {
+    const apis = {
+      secondHand: deleteSecondHand,
+      lostAndFound: deleteLostFound,
+      groupBuy: deleteGroupBuy,
+      errand: deleteErrand,
+    }
+    await apis[item.source](item.id)
+    publishedItems.value = publishedItems.value.filter((p) => !(p.source === item.source && p.id === item.id))
+  } catch {
+    alert('删除失败，请检查网络')
+  }
+}
+
+async function markDone(item: PostRecord) {
+  try {
+    const apis = {
+      secondHand: updateSecondHand,
+      lostAndFound: updateLostFound,
+      groupBuy: updateGroupBuy,
+      errand: updateErrand,
+    }
+    await apis[item.source](item.id, { status: DONE_STATUS[item.source] } as any)
+    item.status = DONE_STATUS[item.source]
+  } catch {
+    alert('操作失败，请检查网络')
+  }
+}
+
+const typeLabel: Record<string, string> = {
+  secondHand: '二手交易',
+  lostAndFound: '失物招领',
+  groupBuy: '拼单搭子',
+  errand: '跑腿委托',
+}
 </script>
 
 <template>
   <section class="page-user-center">
-    <!-- 用户信息卡片 -->
-    <div class="user-card">
-      <div class="avatar">{{ user.avatar || '👤' }}</div>
-      <div class="user-info">
-        <h2 class="user-name">{{ user.name }}</h2>
-        <p class="user-detail">学号: {{ user.studentId }}</p>
-        <p class="user-detail">手机: {{ user.phone }}</p>
-        <p class="user-detail">微信: {{ user.wechat }}</p>
-      </div>
-      <button class="edit-btn">编辑资料</button>
+    <!-- loading -->
+    <p v-if="loading" class="state-text">加载中…</p>
+
+    <!-- error -->
+    <div v-else-if="error" class="error-box">
+      <p>⚠️ {{ error }}</p>
+      <button class="retry-btn" @click="execute()">重试</button>
     </div>
 
-    <!-- 统计概览 -->
-    <div class="stats-row">
-      <div class="stat-item">
-        <span class="stat-num">{{ publishedItems.length }}</span>
-        <span class="stat-label">已发布</span>
+    <template v-else>
+      <!-- ═══ 用户资料卡片 — userStore ═══ -->
+      <div class="profile-card">
+        <div class="avatar">{{ userStore.currentUser.name.charAt(0) }}</div>
+        <div class="profile-info">
+          <h1>{{ userStore.displayName }}</h1>
+          <p>
+            🏫 {{ userStore.currentUser.college }} · 🎓 {{ userStore.currentUser.grade }}
+          </p>
+          <p>这里是你的个人中心，可以查看发布记录和收藏内容。</p>
+        </div>
+        <div class="user-dropdown">
+          <button class="switch-btn" @click="showUserMenu = !showUserMenu">
+            {{ userStore.currentUser.name }} ▾
+          </button>
+          <Transition name="menu-fade">
+            <div v-if="showUserMenu" class="user-menu" @mouseleave="showUserMenu = false">
+              <div
+                v-for="u in MOCK_USERS"
+                :key="u.id"
+                :class="['user-menu-item', { current: u.id === userStore.currentUser.id }]"
+                @click="switchTo(u)"
+              >
+                <span class="menu-avatar">{{ u.name.charAt(0) }}</span>
+                <span class="menu-info">
+                  <strong>{{ u.name }}</strong>
+                  <small>{{ u.college }} · {{ u.grade }}</small>
+                </span>
+                <span v-if="u.id === userStore.currentUser.id" class="menu-check">✓</span>
+              </div>
+            </div>
+          </Transition>
+        </div>
       </div>
-      <div class="stat-item">
-        <span class="stat-num">{{ joinedItems.length }}</span>
-        <span class="stat-label">已参与</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">3</span>
-        <span class="stat-label">已完成</span>
-      </div>
-    </div>
 
-    <!-- 发布/参与 切换 -->
-    <nav class="tab-nav">
-      <button
-        :class="['tab-btn', { active: activeTab === 'published' }]"
-        @click="activeTab = 'published'"
-      >
-        我发布的
-      </button>
-      <button
-        :class="['tab-btn', { active: activeTab === 'joined' }]"
-        @click="activeTab = 'joined'"
-      >
-        我参与的
-      </button>
-    </nav>
+      <!-- ═══ 统计概览 ═══ -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-num">{{ publishedItems.length }}</span>
+          <span class="stat-label">已发布</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num">{{ completedCount }}</span>
+          <span class="stat-label">已完成</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num">{{ favStore.count }}</span>
+          <span class="stat-label">收藏</span>
+        </div>
+      </div>
 
-    <!-- 列表 -->
-    <div class="item-list">
-      <div
-        v-for="item in activeTab === 'published' ? publishedItems : joinedItems"
-        :key="item.id"
-        class="item-card"
-      >
-        <div class="item-main">
-          <h3 class="item-title">{{ item.title }}</h3>
-          <div class="item-meta">
-            <span class="item-category">{{ item.category }}</span>
-            <span class="item-date">{{ item.date }}</span>
+      <!-- ═══ Tab 切换 ═══ -->
+      <nav class="tab-nav">
+        <button
+          :class="['tab-btn', { active: activeTab === 'published' }]"
+          @click="activeTab = 'published'; exitBatch()"
+        >
+          我发布的
+        </button>
+        <button
+          :class="['tab-btn', { active: activeTab === 'favorites' }]"
+          @click="activeTab = 'favorites'"
+        >
+          我的收藏 ({{ favStore.count }})
+        </button>
+      </nav>
+
+      <!-- ═══ 发布列表 — API 数据 + userId 筛选 + 管理 ═══ -->
+      <div v-if="activeTab === 'published'" class="item-list">
+        <div v-for="item in publishedItems" :key="item.source + '-' + item.id" class="item-card">
+          <div class="item-main">
+            <h3 class="item-title">{{ item.title }}</h3>
+            <div class="item-meta">
+              <span class="item-category">{{ item.category }}</span>
+              <span class="item-date">{{ item.date }}</span>
+            </div>
+          </div>
+          <span :class="['item-status', { active: ['在售','进行中','待接单'].includes(item.status) }]">
+            {{ item.status }}
+          </span>
+          <div class="item-actions">
+            <button
+              v-if="!['已售','已解决','已成团','已完成'].includes(item.status)"
+              class="action-btn done-btn"
+              @click="markDone(item)"
+              title="标记完成"
+            >
+              ✓
+            </button>
+            <button class="action-btn del-btn" @click="deletePost(item)" title="删除">
+              🗑
+            </button>
           </div>
         </div>
-        <span :class="['item-status', { active: item.status === '在售' || item.status === '进行中' }]">
-          {{ item.status }}
-        </span>
+        <EmptyState v-if="publishedItems.length === 0" text="还没有发布任何信息" />
       </div>
-      <p v-if="!publishedItems.length && !joinedItems.length" class="empty-tip">暂无记录</p>
-    </div>
+
+      <!-- ═══ 收藏列表 — favoriteStore ═══ -->
+      <div v-else>
+        <!-- 批量操作栏 -->
+        <div v-if="favStore.favorites.length > 0" class="batch-bar">
+          <button
+            v-if="!batchMode"
+            class="batch-toggle-btn"
+            @click="batchMode = true"
+          >
+            ☐ 多选
+          </button>
+          <template v-else>
+            <label class="batch-check">
+              <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" />
+              <span>全选</span>
+            </label>
+            <div class="batch-actions">
+              <button
+                v-if="selectedFavs.size > 0"
+                class="batch-remove-btn"
+                @click="batchRemove"
+              >
+                取消收藏 ({{ selectedFavs.size }})
+              </button>
+              <button class="batch-cancel-btn" @click="exitBatch">完成</button>
+            </div>
+          </template>
+        </div>
+
+        <div v-if="favStore.favorites.length > 0" class="item-list">
+          <div v-for="fav in favStore.favorites" :key="fav.type + '-' + fav.itemId" class="item-card">
+            <input
+              v-if="batchMode"
+              type="checkbox"
+              class="item-check"
+              :checked="selectedFavs.has(favKey(fav.type, fav.itemId))"
+              @change="toggleSelect(fav.type, fav.itemId)"
+            />
+            <div class="item-main">
+              <h3 class="item-title">{{ fav.title }}</h3>
+              <div class="item-meta">
+                <span class="item-category">{{ typeLabel[fav.type] || fav.type }}</span>
+                <span class="item-date">{{ fav.addedAt.slice(0, 10) }}</span>
+              </div>
+            </div>
+            <span class="item-status" :class="{ active: !['已售','已解决','已成团','已完成','已失效'].includes(allItems.get(fav.type + '-' + fav.itemId) || '') }">
+              {{ allItems.get(fav.type + '-' + fav.itemId) || '已失效' }}
+            </span>
+            <button class="remove-btn" @click="favStore.removeFavorite(fav.type, fav.itemId)">
+              取消收藏
+            </button>
+          </div>
+        </div>
+        <EmptyState v-else text="还没有收藏任何内容" />
+      </div>
+    </template>
   </section>
 </template>
 
@@ -107,11 +373,45 @@ const joinedItems: PublishedItem[] = [
   margin: 0 auto;
 }
 
-.user-card {
+.state-text {
+  text-align: center;
+  color: #999;
+  padding: 32px 0;
+}
+
+.error-box {
+  text-align: center;
+  padding: 32px;
+  background: #fef2f2;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+}
+
+.error-box p {
+  color: #dc2626;
+  margin-bottom: 12px;
+}
+
+.retry-btn {
+  padding: 8px 24px;
+  border: 1px solid #409eff;
+  background: #fff;
+  color: #409eff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.retry-btn:hover {
+  background: #409eff;
+  color: #fff;
+}
+
+/* ── 用户资料卡片 ── */
+.profile-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
+  gap: 20px;
+  padding: 24px;
   background: linear-gradient(135deg, #ecf5ff, #f0f7ff);
   border-radius: 12px;
   border: 1px solid #c6e2ff;
@@ -121,34 +421,29 @@ const joinedItems: PublishedItem[] = [
 .avatar {
   width: 64px;
   height: 64px;
-  background: #fff;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 36px;
+  display: grid;
+  place-items: center;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 28px;
+  font-weight: 700;
   flex-shrink: 0;
   border: 2px solid #409eff;
 }
 
-.user-info {
+.profile-info {
   flex: 1;
   min-width: 0;
 }
 
-.user-name {
-  margin: 0 0 6px;
+.profile-card h1 {
+  margin: 0 0 8px;
   font-size: 20px;
   color: #303133;
 }
 
-.user-detail {
-  margin: 0 0 2px;
-  font-size: 13px;
-  color: #909399;
-}
-
-.edit-btn {
+.switch-btn {
   padding: 6px 16px;
   border: 1px solid #409eff;
   border-radius: 6px;
@@ -158,13 +453,93 @@ const joinedItems: PublishedItem[] = [
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  white-space: nowrap;
 }
-
-.edit-btn:hover {
+.switch-btn:hover {
   background: #409eff;
   color: #fff;
 }
 
+/* ── 用户下拉 ── */
+.user-dropdown {
+  position: relative;
+  flex-shrink: 0;
+}
+.user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.user-menu-item:hover {
+  background: #f5f7fa;
+}
+.user-menu-item.current {
+  background: #ecf5ff;
+}
+.menu-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.menu-info {
+  flex: 1;
+  min-width: 0;
+}
+.menu-info strong {
+  display: block;
+  font-size: 14px;
+  color: #303133;
+}
+.menu-info small {
+  font-size: 12px;
+  color: #909399;
+}
+.menu-check {
+  color: #409eff;
+  font-weight: 700;
+}
+
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: opacity 0.15s, transform 0.15s;
+}
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.profile-card p {
+  margin: 0;
+  color: #6b7280;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+/* ── 统计 ── */
 .stats-row {
   display: flex;
   gap: 12px;
@@ -193,6 +568,7 @@ const joinedItems: PublishedItem[] = [
   color: #999;
 }
 
+/* ── Tab ── */
 .tab-nav {
   display: flex;
   gap: 8px;
@@ -221,6 +597,7 @@ const joinedItems: PublishedItem[] = [
   color: #fff;
 }
 
+/* ── 列表 ── */
 .item-list {
   display: flex;
   flex-direction: column;
@@ -235,6 +612,7 @@ const joinedItems: PublishedItem[] = [
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   transition: box-shadow 0.2s;
+  background: #fff;
 }
 
 .item-card:hover {
@@ -282,9 +660,129 @@ const joinedItems: PublishedItem[] = [
   color: #67c23a;
 }
 
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
+/* ── 发布管理按钮 ── */
+.item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.action-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.action-btn:hover {
+  transform: scale(1.1);
+}
+.done-btn {
+  color: #67c23a;
+  border-color: #c8e6c9;
+}
+.done-btn:hover {
+  background: #f0f9eb;
+}
+.del-btn {
+  color: #f56c6c;
+  border-color: #fecaca;
+}
+.del-btn:hover {
+  background: #fef0f0;
+}
+
+/* ── 批量管理 ── */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+.batch-toggle-btn {
+  padding: 6px 14px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background: #fff;
+  color: #606266;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.batch-toggle-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+.batch-actions {
+  display: flex;
+  gap: 8px;
+}
+.batch-cancel-btn {
+  padding: 6px 14px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  background: #fff;
+  color: #606266;
+  font-size: 13px;
+  cursor: pointer;
+}
+.batch-cancel-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+.batch-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+  cursor: pointer;
+}
+.batch-remove-btn {
+  padding: 6px 14px;
+  border: 1px solid #f56c6c;
+  border-radius: 6px;
+  background: #fff;
+  color: #f56c6c;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.batch-remove-btn:hover {
+  background: #fef0f0;
+}
+
+.item-check {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #409eff;
+  flex-shrink: 0;
+}
+
+/* ── 取消收藏 ── */
+.remove-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-left: 12px;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background: #fef0f0;
+  color: #f56c6c;
 }
 </style>

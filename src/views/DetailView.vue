@@ -28,9 +28,11 @@ const apiMap: Record<string, (id: number) => Promise<{ data: DetailItem }>> = {
   errand: (id) => getErrandDetail(id),
 }
 
-const fetchDetail = apiMap[type]
-  ? () => apiMap[type](id).then(res => res.data)
-  : () => Promise.reject(new Error(`未知类型: ${type}`))
+const fetchDetail = (): Promise<DetailItem> => {
+  const fn = apiMap[type]
+  if (fn) return fn(id).then(res => res.data)
+  return Promise.reject(new Error(`未知类型: ${type}`))
+}
 
 const { data: item, loading, error, execute } = useAsync(fetchDetail)
 
@@ -55,7 +57,7 @@ const listLink: Record<string, string> = {
 /** 从 item 中提取通用展示字段 */
 const displayFields = computed(() => {
   if (!item.value) return []
-  const i = item.value as Record<string, unknown>
+  const i = item.value as unknown as Record<string, unknown>
   const fields: { label: string; value: string }[] = []
 
   if (type === 'secondHand') {
@@ -89,14 +91,14 @@ const displayFields = computed(() => {
 const showContact = ref(false)
 const contactInfo = computed(() => {
   if (!item.value) return ''
-  const i = item.value as Record<string, unknown>
+  const i = item.value as unknown as Record<string, unknown>
   return String(i.contact || '暂无联系方式')
 })
 
 // 收藏功能
 const favStore = useFavoriteStore()
 const isFavorited = computed(() => favStore.isFavorited(type as FavoriteType, id))
-const itemTitle = computed(() => (item.value as Record<string, unknown>)?.title as string || '')
+const itemTitle = computed(() => (item.value as unknown as Record<string, unknown>)?.title as string || '')
 
 function toggleFav() {
   favStore.toggleFavorite(type as FavoriteType, id, itemTitle.value)
@@ -107,7 +109,7 @@ const cartStore = useCartStore()
 const isInCart = computed(() => cartStore.isInCart(type as any, id))
 
 function toggleCart() {
-  const i = item.value as Record<string, unknown>
+  const i = item.value as unknown as Record<string, unknown>
   cartStore.toggleCart({
     type: type as any,
     itemId: id,

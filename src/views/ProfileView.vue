@@ -163,6 +163,7 @@ const { loading, error, execute } = useAsync(async () => {
       category: '拼单搭子',
       date: i.createdAt,
       status: '已加入',
+      source: 'groupBuy' as PostSource,
     }))
 })
 
@@ -355,10 +356,8 @@ const completedCount = computed(
                 <span class="item-date">{{ fav.addedAt.slice(0, 10) }}</span>
               </div>
             </div>
-            <span
-              :class="['item-status', { active: !['已售','已解决','已成团','已完成','已失效'].includes(allItems.get(fav.type + '-' + fav.itemId) || '') }]"
-            >
-              {{ allItems.get(fav.type + '-' + fav.itemId) || '已失效' }}
+            <span class="item-status">
+              已收藏
             </span>
             <button class="remove-btn" @click="favStore.removeFavorite(fav.type, fav.itemId)">
               取消收藏

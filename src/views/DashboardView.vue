@@ -30,8 +30,10 @@ const { data: allData, loading, error, execute } = useAsync(async () => {
 
 onMounted(() => execute())
 
+type DashboardData = { secondHand: any[]; lostAndFound: any[]; groupBuy: any[]; errand: any[] }
+
 /** 统计数字 */
-function getStats(data: typeof allData) {
+function getStats(data: DashboardData | null) {
   if (!data) return { total: 0, today: 0, users: 0, done: 0 }
   const all = [...data.secondHand, ...data.lostAndFound, ...data.groupBuy, ...data.errand]
   const today = new Date().toISOString().slice(0, 10)

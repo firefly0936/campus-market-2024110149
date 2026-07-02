@@ -2,38 +2,52 @@
 import { ref, computed, onMounted } from 'vue'
 import { getGroupBuyList, type GroupBuyItem } from '@/api/groupBuy'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import SearchBar from '@/components/SearchBar.vue'
 import { useFavoriteStore } from '@/stores/favorite'
 import { useCartStore } from '@/stores/cart'
 
 const items = ref<GroupBuyItem[]>([])
-const searchQuery = ref('')
+const keyword = ref('')
 const activeTab = ref<'all' | 'active' | 'completed'>('all')
 const loading = ref(false)
+const error = ref(false)
 
 const favStore = useFavoriteStore()
 const cartStore = useCartStore()
 
-onMounted(async () => {
+async function fetchData() {
   loading.value = true
+  error.value = false
   try {
     const res = await getGroupBuyList()
     items.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 const filteredItems = computed(() => {
-  let result = items.value
-  if (activeTab.value === 'active')
-    result = result.filter(i => i.currentCount < i.targetCount)
-  if (activeTab.value === 'completed')
-    result = result.filter(i => i.currentCount >= i.targetCount)
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
-    result = result.filter(item => item.title.toLowerCase().includes(q))
-  }
-  return result
+  return items.value.filter((item) => {
+    const matchTab =
+      activeTab.value === 'all' ||
+      (activeTab.value === 'active' && item.currentCount < item.targetCount) ||
+      (activeTab.value === 'completed' && item.currentCount >= item.targetCount)
+    const matchKeyword =
+      !keyword.value ||
+      item.title.includes(keyword.value) ||
+      item.groupType.includes(keyword.value) ||
+      item.meetingLocation.includes(keyword.value) ||
+      item.description.includes(keyword.value)
+    return matchTab && matchKeyword
+  })
 })
 
 function progressPercent(item: GroupBuyItem): number {
@@ -71,18 +85,18 @@ function progressPercent(item: GroupBuyItem): number {
     </nav>
 
     <!-- 搜索 -->
-    <div class="search-bar">
-      <span class="search-icon">🔎</span>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索拼单活动…"
-        class="search-input"
-      />
-    </div>
+    <SearchBar v-model="keyword" placeholder="搜索标题、类型、地点或描述…" />
 
-    <!-- 加载 -->
-    <p v-if="loading" class="empty-tip">加载中…</p>
+    <!-- 加载状态 -->
+    <LoadingState v-if="loading" text="正在加载拼单活动…" />
+
+    <!-- 错误状态 -->
+    <ErrorState
+      v-else-if="error"
+      message="数据加载失败，请检查 Mock 服务是否正常运行。"
+      show-retry
+      @retry="fetchData"
+    />
 
     <!-- 列表 -->
     <div v-else class="list">
@@ -91,11 +105,11 @@ function progressPercent(item: GroupBuyItem): number {
           <h3 class="gb-title">{{ item.title }}</h3>
           <div class="gb-actions">
             <button
-              :class="['fav-mini', { active: favStore.isFavorited('groupBuy', item.id) }]"
+              class="favorite-btn"
+              :class="{ active: favStore.isFavorited('groupBuy', item.id) }"
               @click.stop="favStore.toggleFavorite('groupBuy', item.id, item.title)"
-              :title="favStore.isFavorited('groupBuy', item.id) ? '取消收藏' : '添加收藏'"
             >
-              {{ favStore.isFavorited('groupBuy', item.id) ? '❤️' : '🤍' }}
+              {{ favStore.isFavorited('groupBuy', item.id) ? '已收藏' : '收藏' }}
             </button>
             <button
               :class="['cart-mini', { active: cartStore.isInCart('groupBuy', item.id) }]"
@@ -124,8 +138,8 @@ function progressPercent(item: GroupBuyItem): number {
         <div v-if="item.currentCount >= item.targetCount" class="gb-status">✅ 已成团</div>
       </div>
       <EmptyState
-        v-if="!loading && filteredItems.length === 0"
-        text="暂无拼单活动"
+        v-if="filteredItems.length === 0"
+        :text="keyword || activeTab !== 'all' ? '没有匹配的拼单，试试调整筛选条件' : '暂无拼单活动'"
       />
     </div>
   </section>
@@ -180,40 +194,6 @@ function progressPercent(item: GroupBuyItem): number {
   color: #fff;
 }
 
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-
-.search-bar:focus-within {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
-}
-
-.search-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #303133;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #c0c4cc;
-}
-
 .list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -253,7 +233,7 @@ function progressPercent(item: GroupBuyItem): number {
   flex-shrink: 0;
 }
 
-.fav-mini,
+.favorite-btn,
 .cart-mini {
   background: none;
   border: none;
@@ -264,13 +244,30 @@ function progressPercent(item: GroupBuyItem): number {
   transition: transform 0.2s;
   flex-shrink: 0;
 }
-.fav-mini:hover,
+
+.favorite-btn {
+  font-size: 13px;
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.favorite-btn:hover {
+  border-color: #f56c6c;
+  color: #f56c6c;
+}
+
+.favorite-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
 .cart-mini:hover {
   transform: scale(1.15);
-}
-.fav-mini.active,
-.cart-mini.active {
-  transform: scale(1.1);
 }
 
 .gb-desc {
@@ -335,12 +332,6 @@ function progressPercent(item: GroupBuyItem): number {
   font-size: 14px;
   font-weight: 600;
   color: #67c23a;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
 }
 
 @media (max-width: 600px) {

@@ -6,6 +6,8 @@ import { getLostFoundList } from '@/api/lostFound'
 import { getGroupBuyList } from '@/api/groupBuy'
 import { getErrandList } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const { data: allData, loading, error, execute } = useAsync(async () => {
   const [sh, lf, gb, er] = await Promise.all([
@@ -53,12 +55,14 @@ const stats = computed(() => {
     <h2>📊 数据看板</h2>
     <p>校园轻集市数据概览。</p>
 
-    <p v-if="loading" class="state-text">加载中…</p>
+    <LoadingState v-if="loading" text="正在加载数据看板…" />
 
-    <div v-else-if="error" class="error-box">
-      <p>⚠️ {{ error }}</p>
-      <button class="retry-btn" @click="execute()">重试</button>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :message="error || '请求失败，请稍后重试'"
+      show-retry
+      @retry="execute()"
+    />
 
     <EmptyState v-else-if="!allData" text="暂无数据" />
 
@@ -74,11 +78,6 @@ const stats = computed(() => {
 <style scoped>
 .page-board { padding: 16px; }
 
-.state-text { text-align: center; color: #999; padding: 32px 0; }
-.error-box { text-align: center; padding: 32px; background: #fef2f2; border-radius: 12px; border: 1px solid #fecaca; }
-.error-box p { color: #dc2626; margin-bottom: 12px; }
-.retry-btn { padding: 8px 24px; border: 1px solid #409eff; background: #fff; color: #409eff; border-radius: 6px; cursor: pointer; }
-.retry-btn:hover { background: #409eff; color: #fff; }
 
 .stats-grid {
   display: grid;

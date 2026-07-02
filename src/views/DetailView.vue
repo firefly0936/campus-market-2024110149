@@ -8,6 +8,8 @@ import { getGroupBuyDetail, type GroupBuyItem } from '@/api/groupBuy'
 import { getErrandDetail, type ErrandItem } from '@/api/errand'
 import ItemCard from '@/components/ItemCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import { useFavoriteStore, type FavoriteType } from '@/stores/favorite'
 import { useCartStore } from '@/stores/cart'
 
@@ -135,15 +137,15 @@ function goBack() {
     </nav>
 
     <!-- loading 态 -->
-    <div v-if="loading" class="state-box">
-      <p class="state-text">加载中…</p>
-    </div>
+    <LoadingState v-if="loading" text="正在加载详情…" />
 
     <!-- error 态 -->
-    <div v-else-if="error" class="state-box state-error">
-      <p class="state-text">⚠️ {{ error }}</p>
-      <button class="retry-btn" @click="execute()">重试</button>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :message="error || '请求失败，请稍后重试'"
+      show-retry
+      @retry="execute()"
+    />
 
     <!-- empty 态 -->
     <div v-else-if="!item" class="state-box">
@@ -245,37 +247,6 @@ function goBack() {
   color: #303133;
 }
 
-/* 状态容器 */
-.state-box {
-  text-align: center;
-  padding: 48px 24px;
-  background: #fff;
-  border-radius: 12px;
-  border: 1px solid #e4e7ed;
-}
-.state-error {
-  border-color: #fecaca;
-  background: #fef2f2;
-}
-.state-text {
-  color: #6b7280;
-  font-size: 15px;
-}
-.retry-btn {
-  margin-top: 12px;
-  padding: 8px 24px;
-  border: 1px solid #409eff;
-  background: #fff;
-  color: #409eff;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-.retry-btn:hover {
-  background: #409eff;
-  color: #fff;
-}
 
 /* 图片 */
 .image-row {

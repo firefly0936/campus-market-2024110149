@@ -1,13 +1,7 @@
 import { ref, type Ref } from 'vue'
 
 /**
- * 通用异步状态管理 — 统一管理 loading / error / data 三种状态。
- * Day1-3 的列表页在 onMounted 中各自重复 try/catch/finally，
- * 此 composable 将其抽离，让视图只需关注数据消费。
- *
- * @example
- * const { data, loading, error, execute } = useAsync(() => getListApi())
- * onMounted(() => execute())
+ * 通用异步状态管理 — 统一管理 loading / error / data 三种状态
  */
 export function useAsync<T>(asyncFn: () => Promise<T>): {
   data: Ref<T | null>

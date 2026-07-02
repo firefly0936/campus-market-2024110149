@@ -2,37 +2,59 @@
 import { ref, computed, onMounted } from 'vue'
 import { getSecondHandList, type SecondHandItem } from '@/api/secondHand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import SearchBar from '@/components/SearchBar.vue'
 import { useFavoriteStore } from '@/stores/favorite'
 import { useCartStore } from '@/stores/cart'
 
 const items = ref<SecondHandItem[]>([])
-const searchQuery = ref('')
+const keyword = ref('')
+const categoryFilter = ref('')
 const sortBy = ref<'newest' | 'price-asc' | 'price-desc'>('newest')
 const loading = ref(false)
+const error = ref(false)
+
+const categories = computed(() => {
+  const cats = new Set(items.value.map(item => item.category).filter(Boolean))
+  return Array.from(cats).sort()
+})
 
 const favStore = useFavoriteStore()
 const cartStore = useCartStore()
 
-onMounted(async () => {
+async function fetchData() {
   loading.value = true
+  error.value = false
   try {
     const res = await getSecondHandList()
     items.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 const filteredItems = computed(() => {
   let result = items.value
   // 隐藏已完成的
   result = result.filter(item => item.status !== '已售')
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
+  if (categoryFilter.value) {
+    result = result.filter(item => item.category === categoryFilter.value)
+  }
+  if (keyword.value.trim()) {
+    const q = keyword.value.trim().toLowerCase()
     result = result.filter(
       item =>
         item.title.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q)
+        item.category.toLowerCase().includes(q) ||
+        item.tradeLocation.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q)
     )
   }
   if (sortBy.value === 'price-asc')
@@ -52,15 +74,11 @@ const filteredItems = computed(() => {
 
     <!-- 搜索与排序 -->
     <div class="toolbar">
-      <div class="search-bar">
-        <span class="search-icon">🔎</span>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="搜索二手物品…"
-          class="search-input"
-        />
-      </div>
+      <SearchBar v-model="keyword" placeholder="搜索商品标题、分类、地点或描述" />
+      <select v-model="categoryFilter" class="sort-select">
+        <option value="">全部分类</option>
+        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+      </select>
       <select v-model="sortBy" class="sort-select">
         <option value="newest">最新发布</option>
         <option value="price-asc">价格从低到高</option>
@@ -69,7 +87,15 @@ const filteredItems = computed(() => {
     </div>
 
     <!-- 加载状态 -->
-    <p v-if="loading" class="empty-tip">加载中…</p>
+    <LoadingState v-if="loading" text="正在加载二手交易信息…" />
+
+    <!-- 错误状态 -->
+    <ErrorState
+      v-else-if="error"
+      message="数据加载失败，请检查 Mock 服务是否正常运行。"
+      show-retry
+      @retry="fetchData"
+    />
 
     <!-- 物品列表 -->
     <div v-else class="list">
@@ -85,11 +111,11 @@ const filteredItems = computed(() => {
         <div class="card-price">
           <div class="card-actions">
             <button
-              :class="['fav-mini', { active: favStore.isFavorited('secondHand', item.id) }]"
+              class="favorite-btn"
+              :class="{ active: favStore.isFavorited('secondHand', item.id) }"
               @click.stop="favStore.toggleFavorite('secondHand', item.id, item.title)"
-              :title="favStore.isFavorited('secondHand', item.id) ? '取消收藏' : '添加收藏'"
             >
-              {{ favStore.isFavorited('secondHand', item.id) ? '❤️' : '🤍' }}
+              {{ favStore.isFavorited('secondHand', item.id) ? '已收藏' : '收藏' }}
             </button>
             <button
               :class="['cart-mini', { active: cartStore.isInCart('secondHand', item.id) }]"
@@ -104,8 +130,8 @@ const filteredItems = computed(() => {
         </div>
       </div>
       <EmptyState
-        v-if="!loading && filteredItems.length === 0"
-        text="暂无二手交易信息"
+        v-if="filteredItems.length === 0"
+        :text="keyword || categoryFilter ? '没有匹配的商品，试试调整筛选条件' : '暂无二手交易信息'"
       />
     </div>
   </section>
@@ -136,41 +162,6 @@ const filteredItems = computed(() => {
 .toolbar {
   display: flex;
   gap: 12px;
-}
-
-.search-bar {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-
-.search-bar:focus-within {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
-}
-
-.search-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #303133;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #c0c4cc;
 }
 
 .sort-select {
@@ -258,7 +249,7 @@ const filteredItems = computed(() => {
   align-items: center;
 }
 
-.fav-mini,
+.favorite-btn,
 .cart-mini {
   background: none;
   border: none;
@@ -268,29 +259,30 @@ const filteredItems = computed(() => {
   border-radius: 4px;
   transition: transform 0.2s;
 }
-.fav-mini:hover,
-.cart-mini:hover {
-  transform: scale(1.15);
-}
-.fav-mini.active,
-.cart-mini.active {
-  transform: scale(1.1);
+
+.favorite-btn {
+  font-size: 13px;
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  background: #fff;
+  transition: all 0.2s;
 }
 
-.fav-mini {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: transform 0.2s;
+.favorite-btn:hover {
+  border-color: #f56c6c;
+  color: #f56c6c;
 }
-.fav-mini:hover {
+
+.favorite-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.cart-mini:hover {
   transform: scale(1.15);
-}
-.fav-mini.active {
-  transform: scale(1.1);
 }
 
 .price {
@@ -301,12 +293,6 @@ const filteredItems = computed(() => {
 
 .price.free {
   color: #67c23a;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
 }
 
 @media (max-width: 600px) {

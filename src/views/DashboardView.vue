@@ -11,6 +11,8 @@ import { getLostFoundList } from '@/api/lostFound'
 import { getGroupBuyList } from '@/api/groupBuy'
 import { getErrandList } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 use([PieChart, BarChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -108,12 +110,14 @@ const barOption = computed(() => {
       <p>校园轻集市数据可视化分析</p>
     </div>
 
-    <p v-if="loading" class="state-text">加载中…</p>
+    <LoadingState v-if="loading" text="正在加载数据看板…" />
 
-    <div v-else-if="error" class="error-box">
-      <p>⚠️ {{ error }}</p>
-      <button class="retry-btn" @click="execute()">重试</button>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :message="error || '请求失败，请稍后重试'"
+      show-retry
+      @retry="execute()"
+    />
 
     <EmptyState v-else-if="!allData" text="暂无数据" />
 
@@ -151,11 +155,6 @@ const barOption = computed(() => {
 .page-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
 .page-header p { color: #909399; font-size: 14px; }
 
-.state-text { text-align: center; color: #999; padding: 32px 0; }
-.error-box { text-align: center; padding: 32px; background: #fef2f2; border-radius: 12px; border: 1px solid #fecaca; }
-.error-box p { color: #dc2626; margin-bottom: 12px; }
-.retry-btn { padding: 8px 24px; border: 1px solid #409eff; background: #fff; color: #409eff; border-radius: 6px; cursor: pointer; }
-.retry-btn:hover { background: #409eff; color: #fff; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: #fff; border: 1px solid #e4e7ed; border-radius: 8px; padding: 20px; text-align: center; }

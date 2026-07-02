@@ -9,6 +9,8 @@ import { getLostFoundList, type LostFoundItem, updateLostFound, deleteLostFound 
 import { getGroupBuyList, type GroupBuyItem, updateGroupBuy, deleteGroupBuy } from '@/api/groupBuy'
 import { getErrandList, type ErrandItem, updateErrand, deleteErrand } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 // ── 两个状态来源 ──
 const userStore = useUserStore()
@@ -75,7 +77,7 @@ const publishedItems = ref<PostRecord[]>([])
 const allItems = ref<Map<string, string>>(new Map())
 
 const { loading, error, execute } = useAsync(async () => {
-  const userId = userStore.currentUser.id
+  const userId = userStore.currentUser?.id ?? 1
 
   const [sh, lf, gb, er] = await Promise.all([
     getSecondHandList(),
@@ -129,28 +131,13 @@ onMounted(() => execute())
 const route = useRoute()
 watch(() => route.path, () => { if (route.path === '/user' || route.path === '/user-center') execute() })
 // 切换用户后立即刷新
-watch(() => userStore.currentUser.id, () => execute())
+watch(() => userStore.currentUser?.id, () => execute())
 
 const completedCount = computed(() =>
   publishedItems.value.filter((i) =>
     ['已售', '已解决', '已完成', '已成团'].includes(i.status)
   ).length
 )
-
-// ── 用户切换（下拉） ──
-const MOCK_USERS = [
-  { id: 1, name: '校园用户', college: '计算机学院', grade: '2023 级' },
-  { id: 2, name: '计算机学院小明', college: '计算机学院', grade: '2022 级' },
-  { id: 3, name: '经管学院小红', college: '经管学院', grade: '2023 级' },
-  { id: 4, name: '外语学院小刚', college: '外语学院', grade: '2024 级' },
-  { id: 5, name: '电信学院小美', college: '电信学院', grade: '2023 级' },
-]
-const showUserMenu = ref(false)
-
-function switchTo(user: typeof MOCK_USERS[number]) {
-  userStore.updateProfile(user)
-  showUserMenu.value = false
-}
 
 // ── 发布管理 ──
 const DONE_STATUS: Record<PostSource, string> = {
@@ -202,47 +189,37 @@ const typeLabel: Record<string, string> = {
 <template>
   <section class="page-user-center">
     <!-- loading -->
-    <p v-if="loading" class="state-text">加载中…</p>
+    <LoadingState v-if="loading" text="正在加载个人中心…" />
 
     <!-- error -->
-    <div v-else-if="error" class="error-box">
-      <p>⚠️ {{ error }}</p>
-      <button class="retry-btn" @click="execute()">重试</button>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :message="error || '请求失败，请稍后重试'"
+      show-retry
+      @retry="execute()"
+    />
 
     <template v-else>
-      <!-- ═══ 用户资料卡片 — userStore ═══ -->
-      <div class="profile-card">
-        <div class="avatar">{{ userStore.currentUser.name.charAt(0) }}</div>
+      <!-- 未登录 -->
+      <div v-if="!userStore.isLoggedIn" class="page-header">
+        <h1>个人中心</h1>
+        <p>请先登录后查看个人中心。</p>
+        <RouterLink to="/login" class="goto-login-btn">去登录</RouterLink>
+      </div>
+
+      <!-- 已登录 -->
+      <template v-else>
+        <!-- ═══ 用户资料卡片 — userStore ═══ -->
+        <div class="profile-card">
+          <div class="avatar">{{ userStore.currentUser?.name?.charAt(0) ?? '?' }}</div>
         <div class="profile-info">
           <h1>{{ userStore.displayName }}</h1>
           <p>
-            🏫 {{ userStore.currentUser.college }} · 🎓 {{ userStore.currentUser.grade }}
+            🏫 {{ userStore.currentUser?.college }} · 🎓 {{ userStore.currentUser?.grade }}
           </p>
           <p>这里是你的个人中心，可以查看发布记录和收藏内容。</p>
         </div>
-        <div class="user-dropdown">
-          <button class="switch-btn" @click="showUserMenu = !showUserMenu">
-            {{ userStore.currentUser.name }} ▾
-          </button>
-          <Transition name="menu-fade">
-            <div v-if="showUserMenu" class="user-menu" @mouseleave="showUserMenu = false">
-              <div
-                v-for="u in MOCK_USERS"
-                :key="u.id"
-                :class="['user-menu-item', { current: u.id === userStore.currentUser.id }]"
-                @click="switchTo(u)"
-              >
-                <span class="menu-avatar">{{ u.name.charAt(0) }}</span>
-                <span class="menu-info">
-                  <strong>{{ u.name }}</strong>
-                  <small>{{ u.college }} · {{ u.grade }}</small>
-                </span>
-                <span v-if="u.id === userStore.currentUser.id" class="menu-check">✓</span>
-              </div>
-            </div>
-          </Transition>
-        </div>
+        <button class="logout-btn" @click="userStore.logout()">退出登录</button>
       </div>
 
       <!-- ═══ 统计概览 ═══ -->
@@ -362,6 +339,7 @@ const typeLabel: Record<string, string> = {
         </div>
         <EmptyState v-else text="还没有收藏任何内容" />
       </div>
+      </template>
     </template>
   </section>
 </template>
@@ -373,38 +351,6 @@ const typeLabel: Record<string, string> = {
   margin: 0 auto;
 }
 
-.state-text {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
-}
-
-.error-box {
-  text-align: center;
-  padding: 32px;
-  background: #fef2f2;
-  border-radius: 12px;
-  border: 1px solid #fecaca;
-}
-
-.error-box p {
-  color: #dc2626;
-  margin-bottom: 12px;
-}
-
-.retry-btn {
-  padding: 8px 24px;
-  border: 1px solid #409eff;
-  background: #fff;
-  color: #409eff;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.retry-btn:hover {
-  background: #409eff;
-  color: #fff;
-}
 
 /* ── 用户资料卡片 ── */
 .profile-card {

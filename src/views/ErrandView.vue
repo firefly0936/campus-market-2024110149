@@ -2,43 +2,53 @@
 import { ref, computed, onMounted } from 'vue'
 import { getErrandList, type ErrandItem } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import SearchBar from '@/components/SearchBar.vue'
 import { useFavoriteStore } from '@/stores/favorite'
 import { useCartStore } from '@/stores/cart'
 
 const items = ref<ErrandItem[]>([])
-const searchQuery = ref('')
+const keyword = ref('')
 const activeTab = ref<'all' | 'pending' | 'taken'>('all')
 const loading = ref(false)
+const error = ref(false)
 
 const favStore = useFavoriteStore()
 const cartStore = useCartStore()
 
-onMounted(async () => {
+async function fetchData() {
   loading.value = true
+  error.value = false
   try {
     const res = await getErrandList()
     items.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 const filteredItems = computed(() => {
-  let result = items.value.filter(item => item.status !== '已完成')
-  if (activeTab.value === 'pending')
-    result = result.filter(i => i.status === '待接单')
-  if (activeTab.value === 'taken')
-    result = result.filter(i => i.status !== '待接单')
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
-    result = result.filter(
-      item =>
-        item.title.toLowerCase().includes(q) ||
-        item.pickupLocation.toLowerCase().includes(q) ||
-        item.deliveryLocation.toLowerCase().includes(q)
-    )
-  }
-  return result
+  return items.value.filter((item) => {
+    if (item.status === '已完成') return false
+    const matchTab =
+      activeTab.value === 'all' ||
+      (activeTab.value === 'pending' && item.status === '待接单') ||
+      (activeTab.value === 'taken' && item.status !== '待接单')
+    const matchKeyword =
+      !keyword.value ||
+      item.title.includes(keyword.value) ||
+      item.taskType.includes(keyword.value) ||
+      item.pickupLocation.includes(keyword.value) ||
+      item.deliveryLocation.includes(keyword.value)
+    return matchTab && matchKeyword
+  })
 })
 </script>
 
@@ -72,18 +82,18 @@ const filteredItems = computed(() => {
     </nav>
 
     <!-- 搜索 -->
-    <div class="search-bar">
-      <span class="search-icon">🔎</span>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索跑腿任务…"
-        class="search-input"
-      />
-    </div>
+    <SearchBar v-model="keyword" placeholder="搜索标题、任务类型、取件或送达地点…" />
 
-    <!-- 加载 -->
-    <p v-if="loading" class="empty-tip">加载中…</p>
+    <!-- 加载状态 -->
+    <LoadingState v-if="loading" text="正在加载跑腿任务…" />
+
+    <!-- 错误状态 -->
+    <ErrorState
+      v-else-if="error"
+      message="数据加载失败，请检查 Mock 服务是否正常运行。"
+      show-retry
+      @retry="fetchData"
+    />
 
     <!-- 列表 -->
     <div v-else class="list">
@@ -92,11 +102,11 @@ const filteredItems = computed(() => {
           <h3 class="errand-title">{{ item.title }}</h3>
           <div class="errand-actions">
             <button
-              :class="['fav-mini', { active: favStore.isFavorited('errand', item.id) }]"
+              class="favorite-btn"
+              :class="{ active: favStore.isFavorited('errand', item.id) }"
               @click.stop="favStore.toggleFavorite('errand', item.id, item.title)"
-              :title="favStore.isFavorited('errand', item.id) ? '取消收藏' : '添加收藏'"
             >
-              {{ favStore.isFavorited('errand', item.id) ? '❤️' : '🤍' }}
+              {{ favStore.isFavorited('errand', item.id) ? '已收藏' : '收藏' }}
             </button>
             <button
               :class="['cart-mini', { active: cartStore.isInCart('errand', item.id) }]"
@@ -123,8 +133,8 @@ const filteredItems = computed(() => {
         </div>
       </div>
       <EmptyState
-        v-if="!loading && filteredItems.length === 0"
-        text="暂无跑腿任务"
+        v-if="filteredItems.length === 0"
+        :text="keyword || activeTab !== 'all' ? '没有匹配的跑腿任务，试试调整筛选条件' : '暂无跑腿任务'"
       />
     </div>
   </section>
@@ -179,40 +189,6 @@ const filteredItems = computed(() => {
   color: #fff;
 }
 
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-
-.search-bar:focus-within {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
-}
-
-.search-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #303133;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #c0c4cc;
-}
-
 .list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -259,7 +235,7 @@ const filteredItems = computed(() => {
   align-items: center;
 }
 
-.fav-mini,
+.favorite-btn,
 .cart-mini {
   background: none;
   border: none;
@@ -270,13 +246,30 @@ const filteredItems = computed(() => {
   transition: transform 0.2s;
   flex-shrink: 0;
 }
-.fav-mini:hover,
+
+.favorite-btn {
+  font-size: 13px;
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.favorite-btn:hover {
+  border-color: #f56c6c;
+  color: #f56c6c;
+}
+
+.favorite-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
 .cart-mini:hover {
   transform: scale(1.15);
-}
-.fav-mini.active,
-.cart-mini.active {
-  transform: scale(1.1);
 }
 
 .status-tag.pending {
@@ -336,12 +329,6 @@ const filteredItems = computed(() => {
 
 .deadline {
   color: #999;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
 }
 
 @media (max-width: 600px) {

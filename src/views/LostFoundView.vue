@@ -2,42 +2,52 @@
 import { ref, computed, onMounted } from 'vue'
 import { getLostFoundList, type LostFoundItem } from '@/api/lostFound'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import SearchBar from '@/components/SearchBar.vue'
 import { useFavoriteStore } from '@/stores/favorite'
 import { useCartStore } from '@/stores/cart'
 
 const items = ref<LostFoundItem[]>([])
-const searchQuery = ref('')
+const keyword = ref('')
 const activeTab = ref<'all' | 'lost' | 'found'>('all')
 const loading = ref(false)
+const error = ref(false)
 
 const favStore = useFavoriteStore()
 const cartStore = useCartStore()
 
-onMounted(async () => {
+async function fetchData() {
   loading.value = true
+  error.value = false
   try {
     const res = await getLostFoundList()
     items.value = res.data
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 const filteredItems = computed(() => {
-  let result = items.value.filter(item => item.status !== '已解决')
-  if (activeTab.value === 'lost')
-    result = result.filter(item => item.type === '失物')
-  if (activeTab.value === 'found')
-    result = result.filter(item => item.type === '招领')
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.trim().toLowerCase()
-    result = result.filter(
-      item =>
-        item.title.toLowerCase().includes(q) ||
-        item.location.toLowerCase().includes(q)
-    )
-  }
-  return result
+  return items.value.filter((item) => {
+    if (item.status === '已解决') return false
+    const matchTab =
+      activeTab.value === 'all' ||
+      (activeTab.value === 'lost' && item.type === '失物') ||
+      (activeTab.value === 'found' && item.type === '招领')
+    const matchKeyword =
+      !keyword.value ||
+      item.title.includes(keyword.value) ||
+      item.location.includes(keyword.value) ||
+      item.description.includes(keyword.value)
+    return matchTab && matchKeyword
+  })
 })
 </script>
 
@@ -71,18 +81,18 @@ const filteredItems = computed(() => {
     </nav>
 
     <!-- 搜索 -->
-    <div class="search-bar">
-      <span class="search-icon">🔎</span>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索物品名称或地点…"
-        class="search-input"
-      />
-    </div>
+    <SearchBar v-model="keyword" placeholder="搜索物品名称、地点或描述…" />
 
-    <!-- 加载 -->
-    <p v-if="loading" class="empty-tip">加载中…</p>
+    <!-- 加载状态 -->
+    <LoadingState v-if="loading" text="正在加载失物招领信息…" />
+
+    <!-- 错误状态 -->
+    <ErrorState
+      v-else-if="error"
+      message="数据加载失败，请检查 Mock 服务是否正常运行。"
+      show-retry
+      @retry="fetchData"
+    />
 
     <!-- 列表 -->
     <div v-else class="list">
@@ -96,11 +106,11 @@ const filteredItems = computed(() => {
           </span>
           <div class="header-actions">
             <button
-              :class="['fav-mini', { active: favStore.isFavorited('lostAndFound', item.id) }]"
+              class="favorite-btn"
+              :class="{ active: favStore.isFavorited('lostAndFound', item.id) }"
               @click.stop="favStore.toggleFavorite('lostAndFound', item.id, item.title)"
-              :title="favStore.isFavorited('lostAndFound', item.id) ? '取消收藏' : '添加收藏'"
             >
-              {{ favStore.isFavorited('lostAndFound', item.id) ? '❤️' : '🤍' }}
+              {{ favStore.isFavorited('lostAndFound', item.id) ? '已收藏' : '收藏' }}
             </button>
             <button
               :class="['cart-mini', { active: cartStore.isInCart('lostAndFound', item.id) }]"
@@ -119,8 +129,8 @@ const filteredItems = computed(() => {
         </div>
       </div>
       <EmptyState
-        v-if="!loading && filteredItems.length === 0"
-        text="暂无失物招领信息"
+        v-if="filteredItems.length === 0"
+        :text="keyword || activeTab !== 'all' ? '没有匹配的信息，试试调整筛选条件' : '暂无失物招领信息'"
       />
     </div>
   </section>
@@ -175,40 +185,6 @@ const filteredItems = computed(() => {
   color: #fff;
 }
 
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-
-.search-bar:focus-within {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
-}
-
-.search-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #303133;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #c0c4cc;
-}
-
 .list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -240,7 +216,7 @@ const filteredItems = computed(() => {
   align-items: center;
 }
 
-.fav-mini,
+.favorite-btn,
 .cart-mini {
   background: none;
   border: none;
@@ -250,13 +226,30 @@ const filteredItems = computed(() => {
   border-radius: 4px;
   transition: transform 0.2s;
 }
-.fav-mini:hover,
+
+.favorite-btn {
+  font-size: 13px;
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.favorite-btn:hover {
+  border-color: #f56c6c;
+  color: #f56c6c;
+}
+
+.favorite-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
 .cart-mini:hover {
   transform: scale(1.15);
-}
-.fav-mini.active,
-.cart-mini.active {
-  transform: scale(1.1);
 }
 
 .type-badge {
@@ -311,12 +304,6 @@ const filteredItems = computed(() => {
   gap: 16px;
   font-size: 12px;
   color: #999;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
 }
 
 @media (max-width: 600px) {

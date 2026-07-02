@@ -2,33 +2,63 @@
   "users": [
     {
       "id": 1,
-      "nickname": "校园用户",
+      "username": "student",
+      "password": "123456",
+      "name": "校园用户",
+      "college": "计算机学院",
+      "grade": "2023级",
       "avatar": "",
-      "createdAt": "2026-06-27"
+      "bio": "热爱校园生活，喜欢分享闲置好物。"
     },
     {
       "id": 2,
-      "nickname": "计算机学院小明",
+      "username": "xiaoming",
+      "password": "123456",
+      "name": "计算机学院小明",
+      "college": "计算机学院",
+      "grade": "2022级",
       "avatar": "",
-      "createdAt": "2026-06-27"
+      "bio": "喜欢折腾数码产品。"
     },
     {
       "id": 3,
-      "nickname": "经管学院小红",
+      "username": "xiaohong",
+      "password": "123456",
+      "name": "经管学院小红",
+      "college": "经管学院",
+      "grade": "2023级",
       "avatar": "",
-      "createdAt": "2026-06-28"
+      "bio": "热爱团购和薅羊毛。"
     },
     {
       "id": 4,
-      "nickname": "外语学院小刚",
+      "username": "xiaogang",
+      "password": "123456",
+      "name": "外语学院小刚",
+      "college": "外语学院",
+      "grade": "2021级",
       "avatar": "",
-      "createdAt": "2026-06-28"
+      "bio": "喜欢帮助同学跑腿。"
     },
     {
       "id": 5,
-      "nickname": "电信学院小美",
+      "username": "xiaomei",
+      "password": "123456",
+      "name": "电信学院小美",
+      "college": "电信学院",
+      "grade": "2023级",
       "avatar": "",
-      "createdAt": "2026-06-28"
+      "bio": "乐于助人，经常帮忙取快递。"
+    },
+    {
+      "username": "111",
+      "password": "111111",
+      "name": "zz",
+      "college": "zz",
+      "grade": "2026级",
+      "avatar": "",
+      "bio": "",
+      "id": 6
     }
   ],
   "secondHand": [
@@ -75,19 +105,6 @@
       "status": "在售",
       "sellerId": 5,
       "createdAt": "2026-06-29"
-    },
-    {
-      "title": "111",
-      "description": "111",
-      "publisherId": 1,
-      "createdAt": "2026-06-30T02:02:24.742Z",
-      "category": "电子产品",
-      "price": 0,
-      "condition": "全新",
-      "tradeLocation": "11111",
-      "status": "在售",
-      "sellerId": 1,
-      "id": 7
     }
   ],
   "lostAndFound": [
@@ -248,20 +265,6 @@
       "status": "进行中",
       "creatorId": 3,
       "createdAt": "2026-06-29"
-    },
-    {
-      "title": "111",
-      "description": "111",
-      "publisherId": 1,
-      "createdAt": "2026-06-30T01:57:32.176Z",
-      "groupType": "外卖拼单",
-      "targetCount": 2,
-      "currentCount": 0,
-      "deadline": "2026-06-30",
-      "meetingLocation": "111",
-      "status": "进行中",
-      "creatorId": 1,
-      "id": 7
     }
   ],
   "errand": [

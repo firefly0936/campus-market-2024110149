@@ -9,6 +9,8 @@ import { getLostFoundList, type LostFoundItem, updateLostFound, deleteLostFound 
 import { getGroupBuyList, type GroupBuyItem, updateGroupBuy, deleteGroupBuy } from '@/api/groupBuy'
 import { getErrandList, type ErrandItem, updateErrand, deleteErrand } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const store = useUserStore()
 const favStore = useFavoriteStore()
@@ -57,21 +59,6 @@ function exitBatch() {
 const isAllSelected = computed(
   () => favStore.favorites.length > 0 && selectedFavs.size === favStore.favorites.length
 )
-
-// ── 用户切换（下拉） ──
-const MOCK_USERS = [
-  { id: 1, name: '校园用户', college: '计算机学院', grade: '2023 级' },
-  { id: 2, name: '计算机学院小明', college: '计算机学院', grade: '2022 级' },
-  { id: 3, name: '经管学院小红', college: '经管学院', grade: '2023 级' },
-  { id: 4, name: '外语学院小刚', college: '外语学院', grade: '2024 级' },
-  { id: 5, name: '电信学院小美', college: '电信学院', grade: '2023 级' },
-]
-const showUserMenu = ref(false)
-
-function switchTo(user: typeof MOCK_USERS[number]) {
-  store.updateProfile(user)
-  showUserMenu.value = false
-}
 
 // ── 发布管理 ──
 const DONE_STATUS: Record<PostSource, string> = {
@@ -125,9 +112,6 @@ interface PostRecord {
 
 const publishedItems = ref<PostRecord[]>([])
 const joinedItems = ref<PostRecord[]>([])
-// 全部原始数据，供收藏夹查询实时状态
-const allItems = ref<Map<string, string>>(new Map()) // key: "type-id" → status
-
 const { loading, error, execute } = useAsync(async () => {
   const userId = store.currentUser?.id ?? 1
 
@@ -137,13 +121,6 @@ const { loading, error, execute } = useAsync(async () => {
     getGroupBuyList(),
     getErrandList(),
   ])
-
-  // 全部数据状态索引（供收藏夹查询）
-  allItems.value.clear()
-  sh.data.forEach((i: SecondHandItem) => allItems.value.set(`secondHand-${i.id}`, i.status))
-  lf.data.forEach((i: LostFoundItem) => allItems.value.set(`lostAndFound-${i.id}`, i.status))
-  gb.data.forEach((i: GroupBuyItem) => allItems.value.set(`groupBuy-${i.id}`, i.status))
-  er.data.forEach((i: ErrandItem) => allItems.value.set(`errand-${i.id}`, i.status))
 
   // 我发布的
   publishedItems.value = [
@@ -195,7 +172,7 @@ onMounted(() => execute())
 const route = useRoute()
 watch(() => route.path, () => { if (route.path === '/user' || route.path === '/user-center') execute() })
 // 切换用户后立即刷新
-watch(() => store.currentUser.id, () => execute())
+watch(() => store.currentUser?.id, () => execute())
 
 const completedCount = computed(
   () =>
@@ -204,79 +181,56 @@ const completedCount = computed(
     ).length
 )
 
-const favRecords = computed(() =>
-  favStore.favorites.map((f) => {
-    const realStatus = allItems.value.get(`${f.type}-${f.itemId}`)
-    return {
-      id: f.itemId,
-      title: f.title,
-      category: { secondHand: '二手交易', lostAndFound: '失物招领', groupBuy: '拼单搭子', errand: '跑腿委托' }[f.type] || f.type,
-      date: f.addedAt.slice(0, 10),
-      status: realStatus || '已失效',
-    }
-  })
-)
-
-const displayItems = computed(() => {
-  if (activeTab.value === 'published') return publishedItems.value
-  if (activeTab.value === 'joined') return joinedItems.value
-  return favRecords.value
-})
 </script>
 
 <template>
   <section class="page-profile">
     <!-- loading -->
-    <p v-if="loading" class="state-text">加载中…</p>
+    <LoadingState v-if="loading" text="正在加载个人中心…" />
 
     <!-- error -->
-    <div v-else-if="error" class="error-box">
-      <p>⚠️ {{ error }}</p>
-      <button class="retry-btn" @click="execute()">重试</button>
-    </div>
+    <ErrorState
+      v-else-if="error"
+      :message="error || '请求失败，请稍后重试'"
+      show-retry
+      @retry="execute()"
+    />
 
     <!-- 正常 -->
     <template v-else>
-      <!-- 用户信息卡片 -->
-      <div class="user-card">
-        <div class="avatar">{{ store.currentUser.name.charAt(0) }}</div>
-        <div class="user-info">
-          <h2 class="user-name">{{ store.displayName }}</h2>
-          <p class="user-detail" v-if="store.currentUser?.college">
-            🏫 {{ store.currentUser.college }}
-          </p>
-          <p class="user-detail" v-if="store.currentUser?.grade">
-            🎓 {{ store.currentUser.grade }}
-          </p>
-          <p class="user-detail" v-if="store.currentUser?.id">
-            ID: {{ store.currentUser.id }}
-          </p>
+      <!-- 未登录 -->
+      <div v-if="!store.isLoggedIn" class="page-header">
+        <h1>个人中心</h1>
+        <p>请先登录后查看个人中心。</p>
+        <RouterLink to="/login" class="goto-login-btn">去登录</RouterLink>
+      </div>
+
+      <!-- 已登录 -->
+      <template v-else>
+        <div class="page-header">
+          <h1>个人中心</h1>
+          <p>管理你的发布、收藏和个人信息。</p>
         </div>
-        <div class="user-actions">
-          <div class="user-dropdown">
-            <button class="edit-btn" @click="showUserMenu = !showUserMenu">
-              {{ store.currentUser.name }} ▾
-            </button>
-            <Transition name="menu-fade">
-              <div v-if="showUserMenu" class="user-menu" @mouseleave="showUserMenu = false">
-                <div
-                  v-for="u in MOCK_USERS"
-                  :key="u.id"
-                  :class="['user-menu-item', { current: u.id === store.currentUser.id }]"
-                  @click="switchTo(u)"
-                >
-                  <span class="menu-avatar">{{ u.name.charAt(0) }}</span>
-                  <span class="menu-info">
-                    <strong>{{ u.name }}</strong>
-                    <small>{{ u.college }} · {{ u.grade }}</small>
-                  </span>
-                  <span v-if="u.id === store.currentUser.id" class="menu-check">✓</span>
-                </div>
-              </div>
-            </Transition>
+
+        <!-- 用户信息卡片 -->
+        <div class="user-card">
+          <div class="avatar">{{ store.currentUser?.name?.charAt(0) ?? '?' }}</div>
+          <div class="user-info">
+            <h2 class="user-name">{{ store.displayName }}</h2>
+            <p class="user-detail" v-if="store.currentUser?.college">
+              🏫 {{ store.currentUser.college }}
+            </p>
+            <p class="user-detail" v-if="store.currentUser?.grade">
+              🎓 {{ store.currentUser.grade }}
+            </p>
+            <p class="user-detail" v-if="store.currentUser?.id">
+              ID: {{ store.currentUser.id }}
+            </p>
+          </div>
+          <div class="user-actions">
+            <button class="logout-btn" @click="store.logout()">退出登录</button>
           </div>
         </div>
-      </div>
 
       <!-- 统计概览 -->
       <div class="stats-row">
@@ -423,6 +377,7 @@ const displayItems = computed(() => {
               : '还没有收藏任何内容'
         "
       />
+      </template>
     </template>
   </section>
 </template>
@@ -434,33 +389,22 @@ const displayItems = computed(() => {
   margin: 0 auto;
 }
 
-.state-text {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
-}
-.error-box {
-  text-align: center;
-  padding: 32px;
-  background: #fef2f2;
-  border-radius: 12px;
-  border: 1px solid #fecaca;
-}
-.error-box p {
-  color: #dc2626;
-  margin-bottom: 12px;
-}
-.retry-btn {
-  padding: 8px 24px;
-  border: 1px solid #409eff;
+.page-header {
+  padding: 24px;
+  border-radius: 16px;
   background: #fff;
-  color: #409eff;
-  border-radius: 6px;
-  cursor: pointer;
+  margin-bottom: 20px;
 }
-.retry-btn:hover {
-  background: #409eff;
-  color: #fff;
+
+.page-header h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 /* 用户卡片 */
@@ -503,6 +447,39 @@ const displayItems = computed(() => {
 .user-actions {
   flex-shrink: 0;
 }
+.goto-login-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.goto-login-btn:hover {
+  background: #1d4ed8;
+}
+
+.logout-btn {
+  padding: 6px 16px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: #fff;
+  color: #ef4444;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.logout-btn:hover {
+  background: #fef2f2;
+}
+
 .edit-btn {
   padding: 6px 16px;
   border: 1px solid #409eff;

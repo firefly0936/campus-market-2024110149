@@ -5,6 +5,9 @@ import { getLostFoundList, type LostFoundItem } from '@/api/lostFound'
 import { getGroupBuyList, type GroupBuyItem } from '@/api/groupBuy'
 import { getErrandList, type ErrandItem } from '@/api/errand'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import ErrorState from '@/components/ErrorState.vue'
+import SearchBar from '@/components/SearchBar.vue'
 
 // 统一列表项类型
 interface MarketItem {
@@ -18,6 +21,7 @@ interface MarketItem {
 
 const items = ref<MarketItem[]>([])
 const loading = ref(false)
+const error = ref(false)
 const activeTab = ref('all')
 const searchQuery = ref('')
 
@@ -28,8 +32,9 @@ const categories = [
   { key: 'errand', name: '跑腿委托', icon: '🏃' },
 ]
 
-onMounted(async () => {
+async function fetchData() {
   loading.value = true
+  error.value = false
   try {
     const [secondHandRes, lostFoundRes, groupBuyRes, errandRes] = await Promise.all([
       getSecondHandList(),
@@ -71,9 +76,15 @@ onMounted(async () => {
       }))
 
     items.value = [...secondHandItems, ...lostFoundItems, ...groupBuyItems, ...errandItems]
+  } catch {
+    error.value = true
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchData()
 })
 
 const filteredItems = computed(() => {
@@ -99,16 +110,7 @@ const filteredItems = computed(() => {
     <p>浏览校园轻集市的四类业务场景。</p>
 
     <!-- 搜索栏 -->
-    <div class="search-bar">
-      <span class="search-icon">🔎</span>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜索物品名称或分类…"
-        class="search-input"
-      />
-      <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">✕</button>
-    </div>
+    <SearchBar v-model="searchQuery" placeholder="搜索物品名称或分类…" />
 
     <!-- 四分类子导航 -->
     <nav class="sub-nav">
@@ -128,8 +130,16 @@ const filteredItems = computed(() => {
       </button>
     </nav>
 
-    <!-- 加载 -->
-    <p v-if="loading" class="empty-tip">加载中…</p>
+    <!-- 加载状态 -->
+    <LoadingState v-if="loading" text="正在加载集市列表…" />
+
+    <!-- 错误状态 -->
+    <ErrorState
+      v-else-if="error"
+      message="数据加载失败，请检查 Mock 服务是否正常运行。"
+      show-retry
+      @retry="fetchData"
+    />
 
     <!-- 列表区域 -->
     <div v-else class="item-list">
@@ -148,7 +158,7 @@ const filteredItems = computed(() => {
         <span class="item-arrow">查看详情 →</span>
       </RouterLink>
       <EmptyState
-        v-if="!loading && filteredItems.length === 0"
+        v-if="filteredItems.length === 0"
         text="暂无相关条目"
       />
     </div>
@@ -158,57 +168,6 @@ const filteredItems = computed(() => {
 <style scoped>
 .page-market {
   padding: 16px;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0;
-  padding: 10px 14px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background: #fff;
-  transition: border-color 0.2s;
-}
-
-.search-bar:focus-within {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
-}
-
-.search-icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  color: #303133;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #c0c4cc;
-}
-
-.search-clear {
-  border: none;
-  background: none;
-  color: #c0c4cc;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 50%;
-  transition: all 0.2s;
-}
-
-.search-clear:hover {
-  color: #909399;
-  background: #f0f0f0;
 }
 
 .sub-nav {
@@ -295,11 +254,5 @@ const filteredItems = computed(() => {
 .item-arrow {
   font-size: 13px;
   color: #409eff;
-}
-
-.empty-tip {
-  text-align: center;
-  color: #999;
-  padding: 32px 0;
 }
 </style>

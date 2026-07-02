@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 
 import FormField from '../components/FormField.vue'
 import ViolationDialog from '../components/ViolationDialog.vue'
-import { createTrade } from '../api/trade'
+import { createSecondHand } from '../api/secondHand'
 import { createLostFound } from '../api/lostFound'
 import { createGroupBuy } from '../api/groupBuy'
 import { createErrand } from '../api/errand'
@@ -17,6 +17,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const publishType = ref<PublishType>('trade')
 const submitting = ref(false)
+const publishError = ref('')
 
 // ── 内容违规检测 ──
 const filterResult = ref<FilterResult | null>(null)
@@ -132,7 +133,7 @@ function validate(): boolean {
 }
 
 function buildPayload() {
-  const userId = userStore.currentUser.id
+  const userId = userStore.currentUser!.id
   const publisher = userStore.displayName
   const base = {
     title: form.title.trim(),
@@ -200,6 +201,12 @@ function extractTextFields(payload: Record<string, unknown>): Record<string, str
 }
 
 async function handleSubmit() {
+  publishError.value = ''
+  if (!userStore.isLoggedIn || !userStore.currentUser) {
+    window.alert('请先登录后再发布信息')
+    router.push('/login')
+    return
+  }
   if (!validate()) return
 
   const payload = buildPayload()
@@ -232,10 +239,11 @@ function handleCancelPublish() {
 /** 实际执行发布请求 */
 async function doPublish(payload: Record<string, unknown>) {
   submitting.value = true
+  publishError.value = ''
   try {
     switch (publishType.value) {
       case 'trade':
-        await createTrade(payload)
+        await createSecondHand(payload)
         break
       case 'lostFound':
         await createLostFound(payload)
@@ -247,6 +255,7 @@ async function doPublish(payload: Record<string, unknown>) {
         await createErrand(payload)
         break
     }
+    resetForm()
     const routeMap: Record<PublishType, string> = {
       trade: '/trade',
       lostFound: '/lost-found',
@@ -256,7 +265,8 @@ async function doPublish(payload: Record<string, unknown>) {
     router.push(routeMap[publishType.value])
   } catch (error) {
     console.error(error)
-    window.alert('发布失败，请检查 Mock 服务是否正常运行')
+    publishError.value = '发布失败，请确认 JSON Server 已启动，并检查表单数据是否完整。'
+    window.alert('发布失败，请确认 JSON Server 已启动，并检查表单数据是否完整。')
   } finally {
     submitting.value = false
   }
@@ -292,6 +302,36 @@ watch(publishType, () => {
   resetForm()
 })
 
+// ── 根据发布类型动态生成 placeholder ──
+const titlePlaceholder = computed(() => {
+  switch (publishType.value) {
+    case 'trade': return '例如：几乎全新的 iPhone 14 Pro 256GB'
+    case 'lostFound': return '例如：蓝色校园卡、黑色双肩包'
+    case 'groupBuy': return '例如：一起拼奶茶外卖，人均 15 元'
+    case 'errand': return '例如：帮忙取韵达快递'
+    default: return '请输入标题'
+  }
+})
+
+const locationPlaceholder = computed(() => {
+  switch (publishType.value) {
+    case 'trade': return '例如：图书馆门口、3 号宿舍楼下'
+    case 'lostFound': return '例如：教学楼 A 区 3 楼、第二食堂'
+    case 'groupBuy': return '例如：学校南门'
+    default: return '请输入地点'
+  }
+})
+
+const descriptionPlaceholder = computed(() => {
+  switch (publishType.value) {
+    case 'trade': return '描述商品的品牌、型号、使用时长、瑕疵等'
+    case 'lostFound': return '描述物品的特征、丢失/拾到的具体位置和时间'
+    case 'groupBuy': return '描述拼单的具体要求、分摊方式等'
+    case 'errand': return '描述任务的具体要求、注意事项等'
+    default: return '请简要描述具体情况'
+  }
+})
+
 const today = computed(() => new Date().toISOString().slice(0, 10))
 const now = computed(() => {
   const d = new Date()
@@ -308,6 +348,13 @@ const now = computed(() => {
     </header>
 
     <form class="publish-form" @submit.prevent="handleSubmit">
+      <!-- 提交失败提示 -->
+      <div v-if="publishError" class="publish-error-banner">
+        <span class="error-banner-icon">⚠️</span>
+        <span>{{ publishError }}</span>
+        <button type="button" class="error-banner-dismiss" @click="publishError = ''">✕</button>
+      </div>
+
       <!-- ── 发布类型选择 ── -->
       <div class="section">
         <div class="section-title">发布类型</div>
@@ -333,7 +380,7 @@ const now = computed(() => {
           <input
             v-model.trim="form.title"
             type="text"
-            placeholder="请输入标题"
+            :placeholder="titlePlaceholder"
             :class="{ invalid: errors.title }"
           />
         </FormField>
@@ -342,7 +389,7 @@ const now = computed(() => {
           <input
             v-model.trim="form.location"
             type="text"
-            placeholder="请输入地点"
+            :placeholder="locationPlaceholder"
             :class="{ invalid: errors.location }"
           />
         </FormField>
@@ -351,7 +398,7 @@ const now = computed(() => {
           <textarea
             v-model.trim="form.description"
             rows="4"
-            placeholder="请简要描述具体情况"
+            :placeholder="descriptionPlaceholder"
             :class="{ invalid: errors.description }"
           ></textarea>
         </FormField>
@@ -494,7 +541,7 @@ const now = computed(() => {
               v-model.number="form.reward"
               type="number"
               min="0"
-              placeholder="请输入酬劳"
+              placeholder="0 表示免费帮忙"
               :class="{ invalid: errors.reward }"
             />
           </FormField>
@@ -503,7 +550,7 @@ const now = computed(() => {
             <input
               v-model.trim="form.from"
               type="text"
-              placeholder="请输入取件地点"
+              placeholder="例如：菜鸟驿站、南门快递柜"
               :class="{ invalid: errors.from }"
             />
           </FormField>
@@ -512,7 +559,7 @@ const now = computed(() => {
             <input
               v-model.trim="form.to"
               type="text"
-              placeholder="请输入送达地点"
+              placeholder="例如：3 号宿舍楼 501"
               :class="{ invalid: errors.to }"
             />
           </FormField>
@@ -545,7 +592,7 @@ const now = computed(() => {
       <div class="form-actions">
         <button type="button" class="btn-secondary" @click="resetForm">重置</button>
         <button type="submit" class="btn-primary" :disabled="submitting">
-          {{ submitting ? '发布中…' : '发布' }}
+          {{ submitting ? '提交中...' : '发布' }}
         </button>
       </div>
     </form>
@@ -568,6 +615,40 @@ const now = computed(() => {
   max-width: 600px;
   margin: 0 auto;
   padding: 16px;
+}
+
+/* ── 提交失败横幅 ── */
+.publish-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.error-banner-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.error-banner-dismiss {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #991b1b;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.error-banner-dismiss:hover {
+  background: #fecaca;
 }
 
 /* ── 页面头部 ── */

@@ -9,7 +9,7 @@ const userStore = useUserStore()
 const cartStore = useCartStore()
 
 // 切换用户后清空购物车
-watch(() => userStore.currentUser.id, () => cartStore.clearCart())
+watch(() => userStore.currentUser?.id, () => cartStore.clearCart())
 </script>
 
 <template>
